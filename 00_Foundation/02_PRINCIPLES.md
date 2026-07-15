@@ -1,8 +1,8 @@
 # AlphaForge v2 — Prinsip
 
-**Status:** Aktif
+**Status:** Aktif — revisi untuk konsistensi dengan spec turunan (lihat catatan di Prinsip #4, #5, #6)
 
-Dokumen ini adalah aturan main yang berlaku di semua layer dan modul. Kalau ada keputusan desain yang bertentangan dengan salah satu prinsip di bawah, prinsip ini yang menang.
+Dokumen ini adalah aturan main yang berlaku di semua layer dan modul. Kalau ada keputusan desain yang bertentangan dengan salah satu prinsip di bawah, prinsip ini yang menang, kecuali pengecualian yang secara eksplisit dicatat di prinsip terkait (lihat Prinsip #6).
 
 ---
 
@@ -18,17 +18,29 @@ Tidak ada saham yang dianalisa dalam ruang hampa. Kondisi market, sektor, dan ma
 
 Satu saham bisa punya profil yang berbeda tergantung kacamata investasi yang dipakai. AlphaForge tidak memaksa satu kesimpulan tunggal — tiga modul (Multibagger, Quality/Compound, Speculative) bereasoning secara independen, dan hasilnya ditampilkan berdampingan. Investor yang memilih lensa mana yang relevan dengan tujuannya.
 
+"Independen" di sini bukan sekadar klaim konseptual, tapi syarat teknis minimum: ketiga modul menerima input yang sama (Knowledge + Market Context Package), tidak saling memanggil, tidak berbagi state satu sama lain dalam satu sesi analisa, dan urutan eksekusinya tidak boleh mempengaruhi hasil modul lain. Kalau implementasi nanti membuat ketiganya berbagi komponen (misalnya prompt/template reasoning yang sama), komponen bersama itu harus dipastikan tidak diam-diam menyamakan kesimpulan ketiganya — kalau itu terjadi, Multi-Lens jadi klaim di atas kertas saja.
+
 ## 4. Risk Adalah Gerbang, Bukan Sekadar Skor
 
-Red flag serius (masalah akuntansi, governance, litigasi) bukan salah satu dari banyak faktor yang dirata-rata ke dalam skor — itu adalah pemeriksaan yang berlaku ke semua modul reasoning sebelum mereka jalan lebih jauh.
+Red flag serius (masalah akuntansi, governance, litigasi) bukan salah satu dari banyak faktor yang dirata-rata ke dalam skor. "Gerbang" di sini berarti **red flag serius wajib menempel eksplisit dan terlihat oleh ketiga modul reasoning sebelum mereka menyimpulkan apa pun** — bukan tenggelam sebagai satu dari banyak input yang dirata-rata secara diam-diam.
+
+Ini bukan berarti proses berhenti begitu ada red flag. Saham tetap diproses sampai ke tiga modul reasoning; yang tidak boleh terjadi adalah modul reasoning menyimpulkan tanpa mempertimbangkan red flag itu. Implementasinya: flag menempel ke Knowledge dan wajib direspons eksplisit oleh tiap modul (misalnya lewat pembatasan confidence atau catatan reasoning), bukan sekadar disediakan sebagai data yang boleh diabaikan.
+
+Pengecualian: kasus yang sudah terkonfirmasi sangat berat (misalnya fraud yang telah terbukti/diputuskan otoritas berwenang, delisting resmi) boleh menghentikan proses lebih awal di Risk/Red-Flag Check — tapi ini kasus khusus, bukan perilaku default gerbang ini. Detail ambang mana yang menghentikan proses vs. yang hanya menempel sebagai flag didefinisikan di `03_LAYER2_SPECS/04_RISK_REDFLAG_CHECK.md`.
 
 ## 5. Confidence Itu Eksplisit
 
-Setiap kesimpulan membawa informasi seberapa kuat evidence yang mendasarinya. Data yang tipis atau tidak lengkap harus terlihat tipis — tidak disamarkan seolah sama meyakinkannya dengan data yang solid.
+Setiap kesimpulan **tentang saham individual** (Knowledge, hasil tiga modul reasoning, Output) membawa informasi seberapa kuat evidence yang mendasarinya. Data yang tipis atau tidak lengkap harus terlihat tipis — tidak disamarkan seolah sama meyakinkannya dengan data yang solid. Mekanisme skornya ada di `03_LAYER2_SPECS/05_CONFIDENCE_DATA_QUALITY.md`.
+
+Komponen Layer 1 yang sifatnya derived/approximated (Business Cycle Stage, Money Flow, Market Sentiment — lihat `04_DATA_SOURCES/01_PROVIDERS_OVERVIEW.md`) tunduk pada semangat prinsip yang sama meski belum punya skor formal: setiap komponen begini harus secara eksplisit menyatakan dirinya sebagai pembacaan yang dikonstruksi/didekati, bukan angka resmi tunggal dari satu sumber otoritatif — supaya Layer 2 dan pengguna tidak keliru menganggapnya sekuat data langsung seperti VIX atau DXY.
 
 ## 6. Sistem Harus Bisa Diaudit ke Belakang
 
 Kesimpulan yang dihasilkan hari ini harus bisa dicek ulang di masa depan terhadap apa yang benar-benar terjadi. Tanpa histori yang terlacak, tidak ada cara membuktikan apakah reasoning-nya benar-benar akurat atau sekadar terdengar meyakinkan.
+
+Setiap entri historis yang disimpan (lihat `03_LAYER2_SPECS/12_HISTORICAL_TRACKING_JOURNAL.md`) juga harus mencatat **versi metodologi/formula** yang dipakai saat kesimpulan itu dibuat — terutama untuk komponen derived/approximated yang logikanya bisa berubah seiring iterasi (lihat Prinsip #5). Tanpa ini, audit di masa depan berisiko membandingkan kesimpulan lama dengan formula yang sudah berbeda tanpa disadari, dan validitas perbandingannya jadi bias.
+
+**Pengecualian yang diakui secara sadar:** mekanisme Historical Tracking/Decision Journal sendiri boleh diimplementasikan belakangan (v2.1), setelah alur inti Screening→Output berjalan. Ini satu-satunya pengecualian eksplisit terhadap aturan "prinsip selalu menang atas keputusan desain" di dokumen ini — ditulis di sini secara sadar, bukan dibiarkan jadi kontradiksi implisit dengan status "Aktif" yang dipakai prinsip-prinsip lain.
 
 ## 7. Gratis Dulu, Berbayar Belakangan
 

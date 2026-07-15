@@ -25,7 +25,7 @@ v2 terdiri dari 2 layer:
 Membaca kondisi makro dan market secara keseluruhan sebelum satu pun saham dianalisa. 12 komponen digabung jadi satu Market Context Package: Business Cycle Stage, Sector Rotation, Money Flow, Liquidity Conditions, Yield Curve, Market Breadth, Volatility (VIX), Market Regime, Macro Calendar, Currency (DXY), Commodity Signals, dan Market Sentiment.
 
 **Layer 2 — Stock Analysis Engine**
-Menyaring seluruh market (NASDAQ + NYSE, bukan watchlist manual), membangun Evidence terverifikasi per saham, menurunkan Knowledge dari evidence itu, melewati gerbang Risk/Red-Flag Check, lalu dianalisa lewat 3 lensa independen — Multibagger, Quality/Compound, dan Speculative — masing-masing dengan proses reasoning sendiri. Aggregator menampilkan ketiga pandangan berdampingan; tidak menggabungkannya jadi satu verdict.
+Menyaring seluruh market (NASDAQ + NYSE, bukan watchlist manual), membangun Evidence terverifikasi per saham, menurunkan Knowledge dari evidence itu, melewati Risk/Red-Flag Check (flag serius menempel eksplisit dan wajib direspons ketiga modul — lihat Prinsip #4), lalu dianalisa lewat 3 lensa independen — Multibagger, Quality/Compound, dan Speculative — masing-masing dengan proses reasoning sendiri. Aggregator menampilkan ketiga pandangan berdampingan; tidak menggabungkannya jadi satu verdict.
 
 Spec lengkap tiap komponen ada di `02_LAYER1_SPECS/` dan `03_LAYER2_SPECS/`.
 
@@ -38,7 +38,7 @@ Spec lengkap tiap komponen ada di `02_LAYER1_SPECS/` dan `03_LAYER2_SPECS/`.
 | Kesadaran market | Tidak ada | Layer 1 khusus, dibaca sebelum analisa saham apa pun |
 | Cakupan (universe) | Watchlist manual (~33 ticker) | Screening seluruh market (NASDAQ + NYSE) |
 | Urutan data → pemahaman | Data langsung jadi skor | Evidence dulu, Knowledge diturunkan darinya |
-| Penanganan risiko | Menyatu dalam scoring, tanpa gerbang khusus | Risk/Red-Flag Check eksplisit sebelum reasoning |
+| Penanganan risiko | Menyatu dalam scoring, tanpa pemeriksaan khusus | Risk/Red-Flag Check eksplisit, flag wajib direspons tiap modul reasoning |
 | Lensa analisa | Satu skor komposit | Tiga lensa independen, ditampilkan bersamaan |
 | Confidence | Tidak dilacak | Confidence/Data Quality menempel di tiap kesimpulan |
 | Siklus belajar | Tidak ada | Historical Tracking / Decision Journal |

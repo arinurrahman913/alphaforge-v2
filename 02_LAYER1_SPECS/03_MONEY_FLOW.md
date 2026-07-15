@@ -4,7 +4,7 @@
 
 ## Definisi
 
-Estimasi arah aliran dana secara agregat di level sektor/market — bukan per saham individual (money flow per saham ada di Evidence, Layer 2).
+Estimasi arah aliran dana secara agregat di level sektor/market — bukan per saham individual. Sinyal setara di level saham individual ada di data kepemilikan institusional pada Evidence, Layer 2 (`03_LAYER2_SPECS/02_EVIDENCE.md`, bagian 1.3) — bukan field bernama "money flow" secara literal, karena granularitas dan sumber datanya berbeda (proxy sector ETF di sini vs. filing 13F di Evidence).
 
 ## Kenapa Penting
 
