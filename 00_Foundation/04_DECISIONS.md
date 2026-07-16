@@ -190,28 +190,71 @@ Rendah untuk dashboard-nya (hapus satu dokumen, ia tidak dibaca komponen lain). 
 
 ---
 
-## D-07 — "Menampilkan kesimpulan" di Section 2 Layer 2: BELUM DIPUTUSKAN
+## D-07 — Section 2 Layer 2 menampilkan **peta konvergensi**, bukan verdict dan bukan tiga kolom telanjang
 
-**Status:** ⚠ Terbuka — perlu diputuskan sebelum dashboard diimplementasikan
-**Menyentuh:** `01_ARCHITECTURE/05_DASHBOARD_LOCAL.md` §4
+**Status:** Aktif
+**Menyentuh:** `01_ARCHITECTURE/05_DASHBOARD_LOCAL.md` §4, `01_ARCHITECTURE/04_DATA_CONTRACTS.md` §7
 
 ### Masalah
-Deskripsi Section 2 berbunyi *"hasil analisa dari reasoning dan menampilkan kesimpulan"*. Frasa itu punya dua pembacaan yang berlawanan arah:
+Deskripsi Section 2 berbunyi *"hasil analisa dari reasoning dan menampilkan kesimpulan"*. Awalnya ini dibaca sebagai pilihan antara dua opsi:
 
-**(a) Kesimpulan masing-masing modul** — tiga `stance` + `stance_rationale` berdampingan. Konsisten dengan Prinsip #3 dan D-04.
+**(a)** Tiga `stance` berdampingan, pembaca menyimpulkan sendiri.
+**(b)** Satu kesimpulan gabungan.
 
-**(b) Satu kesimpulan gabungan** dari tiga modul. Dilarang D-04 dan `01_SYSTEM_OVERVIEW.md` §3.
+Keduanya ditolak. Yang menarik: **keduanya salah karena alasan yang berlawanan** — dan itu justru yang menunjukkan apa yang sebenarnya kurang.
 
-### Kenapa ini bukan sekadar soal kata
-Kalau yang dimaksud (b), menaruhnya di dashboard tidak membuatnya lebih ringan — justru lebih berat. Verdict gabungan yang lahir di lapisan tampilan tetap single-verdict, tapi tanpa spec, tanpa confidence, tanpa `flag_responses`, dan tidak tersimpan ke Historical Tracking. Artinya ia tidak pernah bisa dievaluasi benar atau salahnya.
+### Kenapa (b) ditolak
+Verdict gabungan melanggar Prinsip #3 dan D-04. Menaruhnya di dashboard tidak meringankan — justru memperberat: ia tetap single-verdict, tapi tanpa spec, tanpa confidence, tanpa `flag_responses`, dan tidak tersimpan ke Historical Tracking. Artinya tidak pernah bisa dievaluasi benar-salahnya. Itu melanggar Prinsip #3 di tempat yang paling sulit dideteksi nanti.
 
-Itu bukan cuma melanggar Prinsip #3 — itu melanggarnya di tempat yang paling sulit dideteksi nanti. Dan tekanannya nyata: satu kesimpulan selalu lebih enak dibaca daripada tiga yang harus ditimbang sendiri. Persis itu yang bikin v1 gagal, dan persis itu alasan v2 ada.
+### Kenapa (a) juga ditolak
+Ini bagian yang tidak terlihat di ronde sebelumnya.
 
-### Sementara ini
-Dashboard mengikuti pembacaan **(a)**.
+Keluhan pemicu seluruh rombakan ini adalah **transparansi**. Tapi tiga kolom berdampingan tanpa apa-apa lagi bukan transparan — ia cuma **memindahkan beban sintesis ke pembaca, setiap kali, tanpa alat**. Pembaca yang melihat Multibagger bilang `weak` dan Quality/Compound bilang `compelling` tetap harus menebak sendiri kenapa keduanya berbeda: apakah karena membaca field yang berbeda? Karena bobot yang berbeda atas field yang sama? Karena salah satu kena `knowledge_gaps`?
 
-### Kalau ternyata (b) yang dimaksud
-Jangan dikerjakan diam-diam di dashboard. Buka entri baru yang membatalkan D-04 secara eksplisit, dan taruh verdict-nya di `AggregatorOutput` supaya setidaknya ia berversi, ber-confidence, dan bisa diaudit. Verdict yang dicatat masih bisa dievaluasi dan dicabut; verdict yang cuma hidup di layar tidak.
+Informasi itu **ada** di `ModuleOutput` — tersebar di `stance_rationale`, `context_used`, `knowledge_gaps`, `flag_responses` milik tiga modul. Tapi tersebar. Dan sesuatu yang harus dirakit ulang manual setiap kali secara praktis sama dengan tidak transparan.
+
+Itulah kenapa permintaan "kesimpulan" muncul. Bukan karena ingin verdict — tapi karena tiga kolom saja memang belum selesai.
+
+### Keputusan
+**(c) — `synthesis`: peta konvergensi & divergensi.** Bukan menjawab *"jadi ini bagus atau nggak?"*, tapi menjawab *"ketiganya sepakat di mana, berbeda di mana, dan kenapa berbeda."*
+
+Contoh bentuknya:
+
+> Ketiga modul sepakat fundamental kuat (margin 42%, FCF positif 8 kuartal berturut). Perbedaannya di valuasi: Quality/Compound menilai P/E 34 wajar untuk margin sebesar itu; Multibagger menilai P/E 34 memangkas ruang naik sehingga stance-nya turun ke `weak`; Speculative menganggap valuasi tidak relevan tanpa katalis, dan tidak ada katalis dalam 90 hari. Tidak ada modul yang terhalang `knowledge_gaps`.
+
+Perhatikan yang **tidak** ada di situ: tidak ada peringkat, tidak ada skor, tidak ada "sebaiknya". Yang ada: sumber perbedaannya bisa ditunjuk. Pembaca tetap yang memutuskan — tapi sekarang ia memutuskan sambil tahu di mana persisnya ketiga lensa berpisah.
+
+### Kenapa ini menambah informasi, bukan mengurangi
+Ini pembeda pokok dari (b), dan pantas dinyatakan tegas karena gampang kabur:
+
+- **Verdict/skor memampatkan** tiga dimensi jadi satu, lalu membuang sisanya. Informasi hilang.
+- **`synthesis` memetakan** — ia menunjuk balik ke tiga kolom, tidak menggantikannya. Ia daftar isi, bukan pengganti isi.
+
+Uji pembeda: kalau `synthesis` bisa dibaca **tanpa** tiga kolom dan tetap terasa cukup, ia sudah jadi verdict dan sudah gagal. `synthesis` yang benar justru **tidak berguna** tanpa tiga kolom di atasnya — ia menunjuk ke sana.
+
+### Aturan yang mengikat
+
+| # | Aturan | Kenapa |
+|---|---|---|
+| S1 | **Ditampilkan DI BAWAH tiga kolom, tidak di atas.** Bukan preferensi tata letak — mengikat. | Di atas = verdict yang dibaca duluan, tiga kolom jadi lampiran. Di bawah = rangkuman setelah pembaca melihat sendiri. Posisi menentukan fungsi |
+| S2 | **Wajib sitasi.** Tiap klaim menunjuk modul + field spesifik. Yang tidak bisa disitasi, tidak boleh ditulis | Mencegah `synthesis` menyelundupkan penilaian yang tidak dimiliki modul manapun |
+| S3 | **Kosakata terlarang:** buy/sell/hold, rekomendasi, skor apa pun, peringkat, "secara keseluruhan", "overall" | Kata-kata ini pintu masuk verdict. Dilarang di level teks, bukan cuma niat |
+| S4 | **Confidence `synthesis` = confidence TERENDAH dari tiga modul.** Bukan rata-rata, bukan dihitung sendiri | Rangkuman tidak boleh lebih yakin dari input terlemahnya. Rata-rata akan menyembunyikan satu modul yang buta |
+| S5 | **Kalau ketiga stance sama**, `synthesis` wajib menyatakannya eksplisit dan memicu tanda T2 | Konvergensi penuh adalah sinyal Multi-Lens mungkin cuma klaim di atas kertas (D-04, tes T2). Justru saat paling nyaman itulah paling perlu dicurigai |
+| S6 | Dihasilkan **pipeline**, masuk `AggregatorOutput`, tersimpan ke Historical Tracking, punya `method_version` | Sama seperti D-06. Reasoning yang lahir di lapisan tampilan tidak bisa diaudit |
+
+### Alternatif yang ditolak
+- **(a) tiga kolom telanjang** — konsisten secara prinsip, tapi menyerahkan perakitan ke pembaca setiap kali. Konsistensi yang dibayar dengan komponen yang tidak terpakai bukan konsistensi, itu penghindaran.
+- **(b) verdict gabungan** — alasannya di atas.
+- **Skor kesepakatan** ("3/3 modul positif") — terdengar seperti peta, sebenarnya skor. Memampatkan lagi, dan lebih licik karena menyamar sebagai statistik.
+
+### Risiko yang diterima secara sadar
+`synthesis` **tetap akan jadi yang paling sering dibaca**. Itu tidak bisa dihilangkan — teks naratif selalu menang melawan tabel. S1 (posisi di bawah) dan S2 (wajib sitasi) menekan risikonya, tidak menghapusnya.
+
+**Yang harus diawasi setelah dipakai beberapa minggu:** kalau `synthesis` mulai bisa dibaca berdiri sendiri tanpa tiga kolom terasa hilang — itu tandanya ia sudah pelan-pelan berubah jadi verdict, dan D-07 perlu diperketat atau dicabut. Ini gejala yang kelihatan dari kebiasaan membaca sendiri, bukan dari kode.
+
+### Biaya kalau dibalik
+Rendah. Hapus field `synthesis` dari `AggregatorOutput` dan section-nya dari dashboard — tiga kolom tetap berdiri sendiri, kembali ke (a).
 
 ---
 
@@ -224,8 +267,7 @@ Dicatat di sini supaya tidak keliru dianggap sudah beres:
 - **Ambang kuantitatif red flag** — persentase dilusi, nilai insider selling, jangka waktu.
 - **TTL cache per jenis data** dan ukuran batch aman untuk `yfinance`.
 - **Budget waktu/call satu sesi penuh** — belum pernah dihitung. Lihat `04_DATA_SOURCES/05_RATE_LIMIT_CACHING_STRATEGY.md`.
-- **Spec `context_summary`** — kriteria, ambang, apa yang membuatnya degraded (D-06).
-- **Arti "menampilkan kesimpulan"** di Section 2 Layer 2 (**D-07**) — paling mendesak dari daftar ini.
+- **Spec `context_summary`** — kriteria & ambang. Bentuknya mengikuti pola D-07: memetakan di mana 12 komponen searah dan di mana bertentangan, bukan skor market.
 - **Siapa penulis narasi** — kalau LLM, `method_version`-nya wajib mencakup versi model + prompt.
 
 ---

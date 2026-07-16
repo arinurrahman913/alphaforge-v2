@@ -1,7 +1,7 @@
 # Aggregator & Output
 
 **Status:** Aktif — revisi: kontrak output, urutan tampilan ditetapkan, larangan field verdict (D-04)
-**Doc version:** 2.0.0
+**Doc version:** 2.1.0
 
 ## Definisi
 
@@ -29,11 +29,33 @@ Ini keputusan sadar, bukan default yang kebetulan. Alternatifnya — mengurutkan
 
 Urutan tetap tetap punya bias anchoring — yang pertama dibaca duluan, dan Multibagger akan selalu dapat perhatian pertama. Bedanya: bias itu **konstan**, sama untuk semua saham, jadi tidak bisa disalahartikan sebagai sinyal tentang saham ini. Bias yang konstan bisa dikenali dan dikompensasi pembaca. Bias yang berubah-ubah per saham tidak bisa — ia terlihat seperti informasi.
 
+## Synthesis — Peta Konvergensi (D-07)
+
+Selain menyusun tiga `ModuleOutput`, Aggregator menghasilkan `synthesis`: peta di mana ketiga modul sepakat, di mana berbeda, dan **kenapa** berbeda.
+
+Ini terlihat seperti pelanggaran "Aggregator tidak menyimpulkan" — tapi bukan, dan bedanya pokok:
+
+- **Verdict memampatkan** tiga dimensi jadi satu, lalu membuang sisanya. Informasi hilang.
+- **`synthesis` memetakan** — ia menunjuk balik ke tiga hasil, tidak menggantikannya. Ia daftar isi, bukan pengganti isi.
+
+Alasan ia ada: tiga kolom berdampingan tanpa apa-apa lagi bukan transparan — ia memindahkan beban sintesis ke pembaca setiap kali, tanpa alat. Informasi tentang *kenapa* dua modul berbeda memang sudah ada, tapi tersebar di `stance_rationale`, `context_used`, dan `knowledge_gaps` milik tiga modul. Yang harus dirakit ulang manual tiap kali secara praktis sama dengan tidak transparan.
+
+Aturan mengikat (S1–S6 di D-07), yang terpenting:
+
+- **Wajib sitasi** — klaim yang tidak bisa menunjuk ke modul + field spesifik tidak boleh ditulis.
+- **Confidence = terendah dari tiga modul**, bukan rata-rata. Rangkuman tidak boleh lebih yakin dari input terlemahnya.
+- **Ketiga stance sama → `full_convergence=true`** dan picu tes T2. Konvergensi penuh adalah sinyal Multi-Lens mungkin cuma klaim di atas kertas — justru saat paling nyaman itulah paling perlu dicurigai.
+- **Ditampilkan di bawah tiga kolom**, tidak di atas (urusan dashboard, tapi mengikat).
+
+Bentuknya di `01_ARCHITECTURE/04_DATA_CONTRACTS.md` §7.
+
 ## Yang Tidak Boleh Ada di Output
 
 `AggregatorOutput` **dilarang** punya field `verdict`, `score`, `rank`, `recommendation`, atau turunan apa pun yang meringkas tiga pandangan jadi satu.
 
 Ini bukan "belum sempat" — ini tugas yang sengaja tidak diberikan (`01_ARCHITECTURE/01_SYSTEM_OVERVIEW.md` §3: *"Aggregator tidak menyimpulkan"*). Ditulis sebagai larangan eksplisit karena inilah tekanan yang paling mudah menyerah di fase implementasi: satu angka ringkasan selalu terasa lebih enak dipakai daripada tiga pandangan yang harus dibaca. Persis itu yang bikin v1 gagal.
+
+`synthesis` **bukan pengecualian** dari larangan ini — ia memetakan, tidak memampatkan. Uji pembedanya: kalau `synthesis` bisa dibaca tanpa `module_outputs` dan tetap terasa cukup, ia sudah jadi verdict dan sudah gagal.
 
 Kalau suatu saat ini dilanggar, lakukan lewat entri baru di `00_Foundation/04_DECISIONS.md` yang membatalkan D-04 secara eksplisit — bukan diam-diam saat implementasi.
 

@@ -1,7 +1,7 @@
 # Dashboard Lokal
 
 **Status:** Aktif
-**Doc version:** 1.0.0
+**Doc version:** 1.1.0
 
 ---
 
@@ -146,19 +146,27 @@ Tiap modul menampilkan seluruh isi `ModuleOutput`-nya:
 
 Kalau `halted=true`: tampilkan `halt_reason` dan `risk_flags`, ketiga kolom modul kosong. Jangan sembunyikan halamannya — saham yang dihentikan justru perlu terlihat.
 
-### ⚠ "Menampilkan Kesimpulan" — Belum Diputuskan
+### Kesimpulan: Peta Konvergensi (D-07)
 
-Deskripsi section 2 menyebut *"hasil analisa dari reasoning **dan menampilkan kesimpulan**"*. Frasa itu punya dua pembacaan yang **berlawanan arah**:
+Di **bawah** ketiga kolom — bukan di atas — tampil `synthesis`: peta di mana ketiga modul sepakat, di mana berbeda, dan **kenapa** berbeda.
 
-**(a) Kesimpulan masing-masing modul** — tiga `stance` + `stance_rationale` ditampilkan berdampingan. Ini sudah tercakup di tabel atas. Konsisten dengan Prinsip #3.
+Posisinya mengikat, bukan preferensi tata letak. Di atas, ia jadi verdict yang dibaca duluan dan tiga kolom berubah jadi lampiran. Di bawah, ia rangkuman setelah pembaca melihat sendiri. Posisi menentukan fungsi.
 
-**(b) Satu kesimpulan gabungan** dari tiga modul. **Ini dilarang** oleh D-04 dan `01_SYSTEM_OVERVIEW.md` §3 — `AggregatorOutput` tidak boleh punya `verdict`, `score`, `rank`, atau `recommendation`. Dan menaruhnya di dashboard tidak mengubah apa pun: satu kesimpulan gabungan yang lahir di lapisan tampilan tetap single-verdict, cuma tanpa spec, tanpa confidence, tanpa tercatat di Historical Tracking. Justru versi yang lebih buruk.
+| Elemen | Isi |
+|---|---|
+| `agreements[]` | Klaim yang ketiganya searah, + modul mana + sitasi |
+| `divergences[]` | Klaim yang berbeda, + posisi tiap modul, + **`root_cause`**, + sitasi |
+| `narrative` | Rangkuman naratif |
+| `confidence` | **Sama dengan confidence terendah dari tiga modul** — tampilkan modul mana sumbernya |
+| `full_convergence` | Kalau `true`, tampilkan penanda: ketiga lensa sepakat penuh → patut dicurigai (tes T2) |
 
-Perlu diputuskan sebelum implementasi. Lihat **D-07**.
+**`root_cause` adalah inti gunanya.** "Multibagger dan Quality/Compound berbeda" belum informasi. Yang informasi: *kenapa* — beda field yang dibaca, beda bobot atas field yang sama, salah satu terhalang `knowledge_gap`, atau beda cara merespons flag yang sama.
 
-Selama belum diputuskan, dashboard mengikuti pembacaan **(a)**.
+Tiap sitasi bisa diklik ke field asalnya di Section 1 atau ke kolom modul di atasnya. Ini yang menutup rantai transparansi sepenuhnya: kesimpulan → sumber perbedaan → field → sumber data → waktu tarik.
 
----
+**Yang dilarang tampil di sini:** buy/sell/hold, rekomendasi, skor apa pun, peringkat, "secara keseluruhan", dan skor kesepakatan ("3/3 modul positif" — itu skor yang menyamar jadi peta).
+
+> **Uji pembeda, dipakai saat review tampilan:** kalau bagian ini bisa dibaca tanpa tiga kolom di atasnya dan tetap terasa cukup, ia sudah berubah jadi verdict dan D-07 perlu diperketat. `synthesis` yang benar justru **tidak berguna** sendirian — ia menunjuk ke atas.
 
 ## 5. Yang Perlu Ditambahkan ke Pipeline
 
@@ -169,15 +177,15 @@ Dashboard ini butuh tiga hal yang **belum ada** di kontrak data. Semuanya dihasi
 | `ComponentReading.narrative` | Layer 1, per komponen | Narasi arti pembacaan. Membawa `method_version` |
 | `MarketContextPackage.context_summary` | Layer 1, per sesi | Kesimpulan Section 2 halaman Layer 1. `kind=derived`, punya `method_version` + confidence. Lihat D-06 |
 | `ModuleOutput.stance_rationale` | Layer 2, per modul | Sudah ada di kontrak D-04 — pastikan terisi, bukan opsional |
+| `AggregatorOutput.synthesis` | Layer 2, per saham | Peta konvergensi/divergensi (D-07). `kind` sintesis — punya `method_version` & confidence |
 
-Perubahan ini menaikkan `04_DATA_CONTRACTS.md` ke versi 1.1.0.
+Perubahan ini menaikkan `04_DATA_CONTRACTS.md` ke versi 1.2.0.
 
 ---
 
 ## 6. Yang Masih Perlu Diputuskan
 
 - **D-06** — spec `context_summary`: kriteria, ambang, apa yang membuatnya "degraded".
-- **D-07** — arti "menampilkan kesimpulan" di section 2 Layer 2.
 - **Siapa yang menulis narasi.** Kalau LLM, ia butuh `method_version` yang mencakup versi model + prompt — kalau tidak, narasi lama tidak bisa direproduksi dan Prinsip #6 bocor lewat pintu ini.
 - **Riwayat sesi.** Dashboard menampilkan sesi terakhir saja, atau bisa telusuri sesi lama dari Historical Tracking? Yang kedua jauh lebih berguna untuk mengevaluasi reasoning, tapi butuh format penyimpanan yang sudah stabil.
 - **Teknologi.** Static HTML dari template, atau app lokal. Belum diputuskan — tapi apa pun pilihannya, prinsip 2.1 mengikat.

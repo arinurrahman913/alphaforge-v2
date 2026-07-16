@@ -1,7 +1,7 @@
 # AlphaForge v2 — Glosarium
 
 **Status:** Aktif — revisi: istilah dari kontrak data & keputusan D-01..D-05 ditambahkan
-**Doc version:** 1.3.0
+**Doc version:** 1.4.0
 
 Istilah-istilah kunci yang dipakai konsisten di seluruh dokumen AlphaForge v2. Disusun per kelompok: konsep fondasi, istilah Layer 1, istilah Layer 2.
 
@@ -131,6 +131,9 @@ Lapisan tampilan untuk hasil kedua layer. Berjalan lokal tanpa server, membaca a
 
 **Context Summary**
 Kesimpulan kondisi market dari 12 komponen Layer 1 (Section 2 halaman Layer 1). **Dihasilkan Layer 1, bukan dashboard** — meringkas 12 pembacaan adalah sintesis, dan sintesis adalah reasoning: ia butuh `method_version`, confidence, dan jejak audit. Dilarang punya skor tunggal. Lihat D-06.
+
+**Synthesis (Peta Konvergensi)**
+Bagian yang memetakan di mana ketiga modul reasoning sepakat, di mana berbeda, dan **kenapa** berbeda (`root_cause`). Bukan verdict: verdict memampatkan tiga dimensi jadi satu lalu membuang sisanya; `synthesis` menunjuk balik ke tiga hasil dan tidak menggantikannya — daftar isi, bukan pengganti isi. Confidence-nya = terendah dari tiga modul, bukan rata-rata. Ditampilkan di bawah tiga kolom, tidak di atas. Uji pembedanya: kalau bisa dibaca sendirian dan terasa cukup, ia sudah jadi verdict. Lihat D-07.
 
 **Narasi (Narrative)**
 Penjelasan arti sebuah pembacaan, dalam bahasa manusia. **Artefak pipeline, bukan hasil render** — narasi yang disusun saat halaman dibuka tidak berversi, tidak tersimpan, dan bisa berbeda tiap kali dibuka untuk data yang sama.

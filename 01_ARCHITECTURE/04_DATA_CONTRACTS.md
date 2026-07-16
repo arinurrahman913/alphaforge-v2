@@ -1,7 +1,7 @@
 # Kontrak Data (Data Contracts)
 
 **Status:** Aktif
-**Doc version:** 1.1.0
+**Doc version:** 1.2.0
 
 ---
 
@@ -199,6 +199,7 @@ AggregatorOutput {
   knowledge_ref         : {ticker, evidence_snapshot_date}
 
   module_outputs        : [ModuleOutput]             # selalu 3, urutan lihat di bawah
+  synthesis             : Synthesis                  # D-07
   risk_flags            : [Flag]                     # eksplisit, bukan disembunyikan
   confidence_overall    : {score, band, limiters}
 
@@ -210,6 +211,35 @@ AggregatorOutput {
 }
 ```
 
+### `Synthesis` — Peta Konvergensi (D-07)
+
+```
+Synthesis {
+  method_version        : semver
+  agreements            : [{claim, modules[], citations[]}]   # di mana ketiganya searah
+  divergences           : [{
+                            claim      : string,
+                            modules    : [{module, position}],
+                            root_cause : enum{different_fields, different_weights,
+                                              knowledge_gap, flag_response, context_reading},
+                            citations  : [string]
+                          }]
+  narrative             : string                    # rangkuman naratif, tunduk S2 & S3
+  confidence            : {score, band, limiters}   # = TERENDAH dari 3 modul (S4)
+  full_convergence      : bool                      # true kalau 3 stance sama → picu T2 (S5)
+}
+```
+
+`root_cause` adalah inti gunanya. "Multibagger dan Quality/Compound berbeda" itu belum informasi — yang informasi adalah **kenapa**: apakah mereka membaca field yang berbeda, membobot field yang sama secara berbeda, salah satu terhalang `knowledge_gap`, atau berbeda dalam merespons flag yang sama.
+
+`citations[]` wajib menunjuk ke field spesifik (`knowledge.valuation.pe_trailing`, `module.multibagger.knowledge_gaps[0]`). **Klaim yang tidak bisa disitasi tidak boleh ditulis** (S2). Ini yang mencegah `synthesis` menyelundupkan penilaian yang tidak dimiliki modul manapun.
+
+`confidence` **disalin dari modul dengan confidence terendah**, tidak dihitung sendiri dan tidak dirata-rata (S4). Rangkuman tidak boleh lebih yakin dari input terlemahnya; rata-rata akan menyembunyikan satu modul yang buta di balik dua yang percaya diri.
+
+`Synthesis` **dilarang** punya `verdict`, `score`, `rank`, `recommendation`, atau skor kesepakatan ("3/3 modul positif"). Yang terakhir itu terdengar seperti peta tapi sebenarnya skor — memampatkan tiga dimensi jadi satu, cuma menyamar sebagai statistik.
+
+**Uji pembeda:** kalau `synthesis` bisa dibaca tanpa `module_outputs` dan tetap terasa cukup, ia sudah jadi verdict dan sudah gagal. `Synthesis` yang benar tidak berguna tanpa tiga kolom di atasnya — ia menunjuk ke sana.
+
 ### Urutan Tampilan
 
 `module_outputs` **selalu** berurutan tetap: `multibagger`, `quality_compound`, `speculative`.
@@ -218,7 +248,7 @@ Urutan tetap dipilih secara sadar, bukan default. Alternatifnya — mengurutkan 
 
 Urutan tetap tetap punya bias anchoring (yang pertama dibaca lebih dulu), tapi biasnya **konstan** — sama untuk semua saham, jadi tidak bisa disalahartikan sebagai sinyal tentang saham ini. Bias yang konstan bisa dikenali dan dikompensasi pembaca; bias yang berubah-ubah per saham tidak.
 
-**Aggregator tidak boleh punya field `verdict`, `score`, `rank`, atau `recommendation`.** Bukan karena belum sempat — karena itu tugas yang sengaja tidak diberikan (`01_SYSTEM_OVERVIEW.md` §3).
+**Aggregator tidak boleh punya field `verdict`, `score`, `rank`, atau `recommendation`.** (`synthesis` bukan pengecualian — ia memetakan, tidak memampatkan; lihat D-07 dan uji pembeda di atas.) Bukan karena belum sempat — karena itu tugas yang sengaja tidak diberikan (`01_SYSTEM_OVERVIEW.md` §3).
 
 ### Kalau `halted = true`
 

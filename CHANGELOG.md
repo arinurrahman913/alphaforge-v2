@@ -13,7 +13,7 @@ Rombakan lapisan tampilan. Pemicunya: transparansi — hasil keluar, tapi angka 
   - **Layer 1** — §1: 12 kartu komponen (nilai + badge `kind` + narasi + sumber + waktu tarik + `method_version`), urut mengikuti DAG. §2: kesimpulan konteks market.
   - **Layer 2** — §1: snapshot 7 bagian Knowledge + kelengkapan field + tanggal snapshot + sumber. §2: tiga modul berdampingan (stance, confidence + limiters, `flag_responses`, `context_used`, `knowledge_gaps`).
 - **D-06** — dashboard ditambahkan; `context_summary` & narasi per komponen **dihasilkan Layer 1, bukan dashboard**.
-- **D-07** — ⚠ **terbuka**: arti "menampilkan kesimpulan" di §2 Layer 2.
+- **D-07** — **diputuskan**: §2 Layer 2 menampilkan `synthesis` — peta konvergensi & divergensi, bukan verdict dan bukan tiga kolom telanjang.
 
 ### Aturan mengikat dashboard
 - **Menampilkan, tidak menghitung.** Baca artefak, jangan hitung ulang, jangan panggil provider. Dashboard yang menghitung sendiri = sumber kebenaran kedua; yang diaudit nanti adalah yang tersimpan, bukan yang tampil.
@@ -22,10 +22,17 @@ Rombakan lapisan tampilan. Pemicunya: transparansi — hasil keluar, tapi angka 
 - **Badge `kind` menonjol.** Business Cycle Stage (derived) tidak boleh tampil sebobot VIX (direct).
 - **Section 1 Layer 2 tanpa kata sifat evaluatif.** "Margin 42%" boleh, "margin sehat" tidak.
 
-### Kontrak data → 1.1.0
+### D-07 — kenapa (a) dan (b) dua-duanya ditolak
+- **(b) verdict gabungan** melanggar Prinsip #3 & D-04 — dan di dashboard justru lebih buruk: tetap single-verdict, tapi tanpa confidence dan tidak tersimpan ke Historical Tracking, jadi tidak pernah bisa dievaluasi benar-salahnya.
+- **(a) tiga kolom telanjang** juga ditolak. Ini yang tidak terlihat di ronde sebelumnya: tiga kolom tanpa apa-apa lagi bukan transparan — ia memindahkan beban sintesis ke pembaca setiap kali, tanpa alat. Informasi *kenapa* dua modul berbeda memang ada, tapi tersebar di `stance_rationale` + `context_used` + `knowledge_gaps` milik tiga modul. Yang harus dirakit manual tiap kali = praktis tidak transparan. Itulah kenapa permintaan "kesimpulan" muncul.
+- **(c) `synthesis`** — memetakan, tidak memampatkan. Aturan: wajib sitasi (S2), confidence = terendah dari 3 modul bukan rata-rata (S4), posisi di bawah tiga kolom (S1), kosakata verdict dilarang (S3), konvergensi penuh picu tes T2 (S5).
+- **Uji pembeda:** kalau `synthesis` bisa dibaca tanpa tiga kolom dan terasa cukup, ia sudah jadi verdict dan gagal.
+
+### Kontrak data → 1.2.0
 - `ComponentReading.narrative` + `narrative_version`
 - `MarketContextPackage.context_summary` → `ContextSummary {kind, method_version, narrative, confidence, components_degraded}`
-- `ContextSummary` **dilarang** punya skor tunggal — sejajar dengan larangan `verdict` di Aggregator
+- `AggregatorOutput.synthesis` → `Synthesis {agreements[], divergences[] (+root_cause), narrative, confidence, full_convergence}`
+- `ContextSummary` & `Synthesis` **dilarang** punya skor tunggal — termasuk skor kesepakatan ("3/3 modul positif"), yang terdengar seperti peta tapi sebenarnya skor
 
 ### Catatan Prinsip #8
 Dashboard menambah komponen, dan Prinsip #8 melarang melebar sebelum yang ada matang. Kasus ini diterima karena dashboard tidak menambah kemampuan analisa — ia membuat analisa yang sudah ada bisa diperiksa. Yang ada tidak bisa dimatangkan kalau hasilnya tidak bisa dilihat.
