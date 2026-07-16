@@ -1,7 +1,7 @@
 # Kontrak Data (Data Contracts)
 
 **Status:** Aktif
-**Doc version:** 1.2.0
+**Doc version:** 2.0.0
 
 ---
 
@@ -62,7 +62,7 @@ ComponentReading {
 }
 ```
 
-`narrative` dihasilkan **pipeline**, bukan dashboard saat render (D-06). Narasi yang lahir saat render tidak berversi, tidak tersimpan, dan bisa berbeda tiap kali halaman dibuka untuk data yang sama — itu reasoning yang bersembunyi di lapisan tampilan.
+`narrative` dihasilkan **pipeline**, bukan dashboard saat render (D-06). Dan ia **render deterministik dari field terstruktur, bukan karangan bebas** (D-10) — field dihitung dulu oleh aturan, prosanya template dari field itu. Konsekuensinya: narasi secara struktural tidak bisa mengatakan apa pun yang tidak ada di data. Klaim tanpa sitasi jadi mustahil ditulis, bukan sekadar melanggar aturan.
 
 ### Catatan: kenapa `kind` wajib
 
@@ -131,6 +131,66 @@ PeerComparisonResult {
 
 ---
 
+## 5b. Catalyst Set (D-11)
+
+Dihasilkan **Fase A**, per-ticker, diturunkan dari Evidence (kalender earnings, filing, berita).
+
+```
+CatalystSet {
+  ticker                : string
+  method_version        : semver
+  catalysts             : [{
+                            catalyst_id : string,
+                            kind        : enum{earnings, product, regulatory, filing, other},
+                            expected_at : date | {from, to},      # rentang kalau tak pasti
+                            certainty   : enum{scheduled, expected, rumored},
+                            expires_at  : date,                   # kapan ia berhenti relevan
+                            source      : {provider, fetched_at}
+                          }]
+  horizon_days          : int                # jendela yang dipindai
+  status                : enum{ok, degraded, missing}
+}
+```
+
+### Kenapa bukan bagian Knowledge
+
+Katalis bukan fakta tentang keadaan perusahaan — ia fakta tentang kalender. Alasan pokoknya **umur simpan**: `KnowledgeProfile` adalah potret pada `evidence_snapshot_date` dan seluruh isinya meluruh dengan laju yang sama. Katalis punya kedaluwarsa masing-masing — earnings 19 Juli mati pada 20 Juli, margin 42% tidak.
+
+Menaruh keduanya di satu paket berarti field dengan laju luruh berbeda duduk berdampingan tanpa penanda, dan itu akan salah dibaca cepat atau lambat. `expires_at` yang eksplisit ada supaya dashboard bisa menandai katalis yang sudah lewat, bukan menampilkannya seolah masih menunggu.
+
+Konsumen utama: Speculative Module. Konsumen sekunder: Multibagger (katalis bisa membuka ruang naik).
+
+## 5c. Confidence Report (D-11)
+
+Dihasilkan **Fase B** (butuh peer), satu per ticker.
+
+```
+ConfidenceReport {
+  ticker                : string
+  method_version        : semver
+  overall               : {score: 0-100, band: enum{low,medium,high}, limiters: [string]}
+  by_section            : map<knowledge_section, {filled, expected, score}>
+  peer_penalty          : {applied: bool, reason: string | null}   # low_sample_size / peer_failures
+  context_penalty       : {applied: bool, components_degraded: [string]}
+  evidence_age_days     : int
+}
+```
+
+### Hubungannya dengan `ModuleOutput.confidence`
+
+Ini yang selama ini kabur, dan sekarang tegas:
+
+| | Mengukur | Jumlah |
+|---|---|---|
+| `ConfidenceReport` | seberapa kuat **data** saham ini | 1 per ticker |
+| `ModuleOutput.confidence` | seberapa yakin **modul ini** pada kesimpulannya sendiri | 3 per ticker |
+
+**Aturan V6: `ModuleOutput.confidence.score` ≤ `ConfidenceReport.overall.score`.**
+
+Modul tidak boleh lebih yakin pada kesimpulannya daripada data yang menopangnya. Tanpa V6, modul bisa mengaku yakin 90 di atas profil yang 60% lengkap dan tidak ada yang menghentikannya.
+
+Kebalikannya tetap sah dan penting: modul **boleh** jauh kurang yakin dari data yang tersedia. Data lengkap tidak mewajibkan kesimpulan kuat — sering justru sebaliknya.
+
 ## 6. Module Output — Kontrak Inti (D-04)
 
 Berlaku identik untuk ketiga modul. **Bentuknya sama, isinya bebas** — itu justru yang membuat Multi-Lens bisa dibandingkan tanpa disamakan.
@@ -141,7 +201,7 @@ ModuleOutput {
   ticker                : string
   method_version        : semver
 
-  stance                : enum{compelling, interesting, weak, not_applicable}
+  stance                : <kosakata milik modul ini — lihat tabel di bawah, D-09>
   stance_rationale      : string              # kenapa stance itu, bahasa manusia
 
   confidence            : {
@@ -166,6 +226,22 @@ ModuleOutput {
 }
 ```
 
+### Kosakata `stance` — Berbeda Per Modul (D-09)
+
+| Modul | Pertanyaannya | Kosakata |
+|---|---|---|
+| `multibagger` | Ada ruang untuk kelipatan besar? | `ruang_terbuka` · `ruang_sempit` · `ruang_tertutup` · `ruang_tak_terbaca` |
+| `quality_compound` | Ini mesin compounding? | `compounding_kuat` · `compounding_rapuh` · `bukan_compounder` · `mesin_tak_terbaca` |
+| `speculative` | Ada asimetri berkatalis? | `asimetri_berkatalis` · `asimetri_tanpa_katalis` · `tanpa_asimetri` · `asimetri_tak_terbaca` |
+
+Versi sebelumnya memakai satu enum bersama (`compelling/interesting/weak/not_applicable`). Itu **skala ordinal yang dipakai identik oleh tiga modul** — artinya hitungan suara: "2 compelling, 1 weak". Verdict-nya tidak hilang, cuma pindah ke kepala pembaca, dan jadi lebih sulit dilarang karena tidak punya field.
+
+Kosakata terpisah membuat suaranya **tidak bisa dihitung karena operasinya tidak ada**. `ruang_sempit + compounding_kuat + tanpa_asimetri` tidak menjumlah jadi apa pun. Pembaca terpaksa membacanya sebagai tiga jawaban atas tiga pertanyaan — yang memang begitu adanya.
+
+**Tabel pemetaan antar kosakata dilarang dibuat.** Itu akan mengembalikan sumbu bersama lewat pintu belakang.
+
+Di dalam satu kosakata urutan tetap ada (`ruang_terbuka` > `ruang_sempit`) dan itu sah — satu lensa, satu sumbu. Itulah yang membuat daftar per lensa di D-08 bisa diurutkan tanpa melanggar apa pun.
+
 ### Aturan Validasi — Output Ditolak Kalau Gagal
 
 Ini bagian yang membuat Prinsip #4 dan #5 punya gigi. Bukan harapan — syarat.
@@ -176,7 +252,8 @@ Ini bagian yang membuat Prinsip #4 dan #5 punya gigi. Bukan harapan — syarat.
 | V2 | `flag_responses[].rationale` harus menyebut flag itu secara spesifik, bukan kalimat umum yang sama untuk semua flag. Rationale identik di ≥2 flag berbeda → **ditandai `generic_response`** untuk direview. | #4 |
 | V3 | Kalau `confidence.band != high`, `limiters` tidak boleh kosong. | #5 |
 | V4 | Kalau ada field Knowledge berstatus `missing` yang masuk kriteria modul ini, ia harus muncul di `knowledge_gaps`. | #5 |
-| V5 | `stance = not_applicable` wajib punya `stance_rationale` — modul tidak boleh diam-diam mangkir dari saham yang sulit. | #3 |
+| V5 | Keadaan `*_tak_terbaca` wajib menyebut `knowledge_gaps` penyebabnya — modul tidak boleh diam-diam mangkir dari saham yang sulit. | #3 |
+| V6 | `confidence.score` ≤ `ConfidenceReport.overall.score`. Modul tidak boleh lebih yakin pada kesimpulannya daripada data yang menopangnya. | #5 |
 
 > **Catatan V2:** log progres 14 Juli sudah mencatat gejalanya duluan — "respons red-flag di 3 modul masih level umum (moderate/elevated), belum spesifik per jenis flag". V1 memaksa modul menjawab; V2 memaksa jawabannya berbeda-beda. Tanpa V2, V1 gampang dipenuhi dengan menyalin kalimat yang sama tiga kali.
 
@@ -184,7 +261,11 @@ Ini bagian yang membuat Prinsip #4 dan #5 punya gigi. Bukan harapan — syarat.
 
 Prinsip #3 sudah mendefinisikan "independen" secara teknis, tapi belum pernah menyatakan cara mengeceknya. Dua tes yang bisa dijalankan langsung:
 
-- **T1 — Urutan tidak berpengaruh.** Jalankan ketiga modul dengan input identik dalam urutan acak, berkali-kali. Semua `ModuleOutput` harus identik byte-per-byte tiap kali. Kalau tidak, ada state yang bocor antar modul.
+- **T1a — Determinisme struktural.** Input sama → field terstruktur (`stance`, `flag_responses[].impact`, `context_used`, `root_cause`) identik tiap kali. **Gate keras.**
+- **T1b — Independensi urutan.** Acak urutan eksekusi tiga modul → T1a tetap lulus. Kalau tidak, ada state yang bocor antar modul.
+- **Narasi tidak diuji terpisah** — ia render deterministik dari field terstruktur (D-10), jadi kalau field-nya identik, narasinya identik dengan sendirinya.
+
+> Kalau modul reasoning sendiri berbasis LLM, T1a tidak akan lulus. Itu keputusan yang harus diambil sadar, bukan ditemukan saat tes merah — lihat D-10 dan Keputusan Terbuka.
 - **T2 — Konvergensi mencurigakan.** Di satu batch analisa, kalau ketiga modul menghasilkan `stance` yang sama untuk >90% ticker, Multi-Lens-nya patut dicurigai jadi klaim di atas kertas. Ini bukan kegagalan otomatis — bisa saja market-nya memang seragam — tapi wajib memicu review, bukan lewat diam-diam.
 
 ---
@@ -200,8 +281,9 @@ AggregatorOutput {
 
   module_outputs        : [ModuleOutput]             # selalu 3, urutan lihat di bawah
   synthesis             : Synthesis                  # D-07
+  catalysts             : CatalystSet                # D-11
+  confidence_report     : ConfidenceReport           # D-11
   risk_flags            : [Flag]                     # eksplisit, bukan disembunyikan
-  confidence_overall    : {score, band, limiters}
 
   halted                : bool                       # true kalau berhenti di severity ekstrem
   halt_reason           : string | null

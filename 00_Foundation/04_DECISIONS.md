@@ -257,6 +257,188 @@ Uji pembeda: kalau `synthesis` bisa dibaca **tanpa** tiga kolom dan tetap terasa
 Rendah. Hapus field `synthesis` dari `AggregatorOutput` dan section-nya dari dashboard — tiga kolom tetap berdiri sendiri, kembali ke (a).
 
 ---
+## D-08 — Masuk lewat satu lensa, bukan lewat daftar gabungan
+
+**Status:** Aktif
+**Menyentuh:** `01_ARCHITECTURE/05_DASHBOARD_LOCAL.md`, `01_ARCHITECTURE/03_LAYER2_STOCK_ANALYSIS.md`
+
+### Masalah
+Lubang terbesar di seluruh v2, dan tidak tersentuh oleh spec lama maupun D-01..D-07.
+
+Pipeline menghasilkan 1.500–3.000 `AggregatorOutput`. Dashboard menampilkan satu saham. **Tidak pernah ada yang menjawab: bagaimana sampai ke halaman itu?** Tidak ada halaman daftar, tidak ada rute masuk.
+
+Dan begitu daftar dibuat, ia butuh urutan. Urutan butuh peringkat. Peringkat dilarang D-04 & D-07.
+
+Ini bukan kelalaian UI — ini **dua keputusan v2 yang saling bertabrakan**:
+
+| | Populasi | Verdict | Bisa dibaca? |
+|---|---|---|---|
+| v1 | watchlist kecil | satu skor | ya |
+| v2 | 8.000 saham | dilarang | **tidak** |
+
+v2 membalik keduanya sekaligus. Tidak ada yang bisa membaca 2.000 laporan tiga lensa.
+
+### Keputusan
+**Larangannya adalah pada MENGGABUNG, bukan pada MENGURUTKAN.** Itu pembedaan yang selama ini tidak pernah dinyatakan, dan begitu dinyatakan, jalan keluarnya terbuka.
+
+Prinsip #3 melarang tiga lensa dipadatkan jadi satu peringkat. Ia **tidak** melarang satu lensa mengurutkan menurut kriterianya sendiri — di dalam satu lensa, sumbu tunggal memang ada dan memang sah.
+
+Maka: **tidak ada satu daftar. Ada tiga daftar, dan satu daftar keempat.**
+
+```
+  MASUK LEWAT LENSA — pilih pertanyaanmu dulu, bukan sahamnya
+
+  ┌────────────────┬────────────────┬────────────────┐
+  │  Multibagger   │ Quality/Comp.  │  Speculative   │
+  │  ~2.000 saham  │  ~2.000 saham  │  ~2.000 saham  │
+  │  urut menurut  │  urut menurut  │  urut menurut  │
+  │  kriterianya   │  kriterianya   │  kriterianya   │
+  │  SENDIRI       │  SENDIRI       │  SENDIRI       │
+  └────────┬───────┴────────┬───────┴────────┬───────┘
+           └────────────────┼────────────────┘
+                            ▼
+              Halaman saham — TIGA lensa, termasuk
+              dua yang tadi tidak kamu pakai
+```
+
+**Daftar keempat — Divergensi.** Diurutkan menurut seberapa jauh ketiga lensa berselisih (dari `synthesis.divergences[]`). Ini bukan peringkat kualitas — ini peringkat **seberapa banyak yang bisa dipelajari**. Saham yang ketiganya sepakat tidak mengajarkan apa pun yang tidak bisa didapat dari satu lensa saja; saham yang ketiganya berselisih adalah satu-satunya tempat multi-lens benar-benar membayar dirinya sendiri.
+
+### Aturan
+| # | Aturan |
+|---|---|
+| L1 | **Tiga daftar tidak pernah digabung.** Tidak ada tampilan yang mencampur peringkat lintas lensa |
+| L2 | **Tidak ada kolom lensa lain di daftar lensa.** Daftar Multibagger tidak boleh menampilkan stance Quality — itu penggabungan lewat pintu samping |
+| L3 | **Pengurutan di dalam daftar memakai kosakata lensa itu sendiri** (D-09), jadi lintas daftar tidak ada operasi banding |
+| L4 | **Halaman saham selalu menampilkan ketiganya**, tak peduli lewat daftar mana masuknya |
+| L5 | Daftar Divergensi mengurut menurut jumlah & kedalaman divergensi, **tidak pernah** menurut stance |
+
+### Kenapa ini justru memperkuat Prinsip #3
+Awalnya terdengar seperti kompromi — "ya sudah, kasih peringkat saja, asal per lensa". Bukan.
+
+Masuk lewat satu lensa berarti kamu **menyatakan pertanyaanmu lebih dulu**. Lalu di halaman saham, kamu dipaksa berhadapan dengan dua lensa yang tidak kamu pilih. Itu urutan yang benar: kamu datang dengan pertanyaan, dan sistem menunjukkan bahwa ada dua pertanyaan lain yang tidak kamu tanyakan.
+
+Bandingkan dengan satu daftar berperingkat: kamu datang tanpa pertanyaan, sistem menyodorkan jawaban, dan tiga lensa jadi lampiran yang dibaca setelah keputusan sudah terbentuk. Itu v1 dengan langkah tambahan.
+
+### Alternatif yang ditolak
+- **Urut menurut confidence** — mengurutkan menurut kekuatan data, bukan menurut apa pun yang kamu tanyakan. Saham dengan data lengkap dan tesis membosankan akan selalu di atas.
+- **Satu daftar dengan tiga kolom stance** — inilah hitungan suara yang dilarang, cuma berbentuk tabel. Pembaca yang disuruh menjumlahkan.
+- **Skor gabungan berbobot** — v1, persis.
+
+### Biaya kalau dibalik
+Sedang. Struktur daftar melekat ke dashboard dan ke cara orang memakai sistem — kebiasaan lebih mahal dibalik daripada kode.
+
+---
+
+## D-09 — Kosakata stance berbeda per modul
+
+**Status:** Aktif
+**Menyentuh:** `01_ARCHITECTURE/04_DATA_CONTRACTS.md`, `03_LAYER2_SPECS/07`, `08`, `09`
+
+### Masalah
+D-04 mendefinisikan `stance : enum{compelling, interesting, weak, not_applicable}` — **identik untuk ketiga modul**. Itu kesalahan saya sendiri, dan cukup serius.
+
+Enum itu **ordinal**: compelling > interesting > weak. Dipakai identik oleh tiga modul, ia langsung jadi **hitungan suara**: "2 compelling, 1 weak". Verdict-nya tidak hilang — ia cuma pindah dari Aggregator ke kepala pembaca, dan justru jadi lebih sulit dilarang karena tidak ada field-nya.
+
+Lebih dalam lagi, ia melanggar Prinsip #3 di akarnya. Kalau tiga lensa mengajukan **pertanyaan yang berbeda**, jawabannya tidak boleh berada di sumbu yang sama. `not_applicable`-nya Speculative dan `weak`-nya Multibagger tidak sebanding — tapi enum bersama menyatakan mereka sebanding.
+
+### Keputusan
+Tiap modul punya kosakata sendiri, diturunkan dari pertanyaannya sendiri:
+
+| Modul | Pertanyaannya | Kosakata stance |
+|---|---|---|
+| **Multibagger** | Ada ruang untuk kelipatan besar? | `ruang_terbuka` · `ruang_sempit` · `ruang_tertutup` · `ruang_tak_terbaca` |
+| **Quality/Compound** | Ini mesin compounding? | `compounding_kuat` · `compounding_rapuh` · `bukan_compounder` · `mesin_tak_terbaca` |
+| **Speculative** | Ada asimetri berkatalis? | `asimetri_berkatalis` · `asimetri_tanpa_katalis` · `tanpa_asimetri` · `asimetri_tak_terbaca` |
+
+**Tidak ada tabel pemetaan antar kosakata. Membuatnya dilarang** — itu akan mengembalikan sumbu bersama lewat pintu belakang.
+
+### Kenapa ini bekerja
+Suaranya tidak bisa dihitung bukan karena dilarang, tapi karena **operasinya tidak ada**. "`ruang_sempit` + `compounding_kuat` + `tanpa_asimetri`" tidak menjumlah jadi apa pun. Pembaca terpaksa membaca ketiganya sebagai tiga jawaban atas tiga pertanyaan — yang memang begitu adanya.
+
+Di dalam satu kosakata, urutan tetap ada (`ruang_terbuka` > `ruang_sempit`), dan itu sah: satu lensa, satu sumbu. Itu yang membuat D-08 bisa mengurutkan daftar per lensa tanpa melanggar apa pun.
+
+### Catatan: tiap modul punya keadaan "tak terbaca" sendiri
+`not_applicable` yang lama merangkap dua hal: "modul ini tidak relevan untuk saham ini" dan "datanya tidak cukup untuk menjawab". Sekarang dipisah — keadaan `*_tak_terbaca` khusus untuk gap data, dan wajib menyebut `knowledge_gaps` penyebabnya (aturan V5 direvisi).
+
+### Biaya kalau dibalik
+Rendah di spec, sedang di kode kalau enum sudah tertanam.
+
+---
+
+## D-10 — Narasi dirender dari field terstruktur, bukan dikarang
+
+**Status:** Aktif
+**Menyentuh:** `01_ARCHITECTURE/04_DATA_CONTRACTS.md`, `01_ARCHITECTURE/05_DASHBOARD_LOCAL.md`
+
+### Masalah
+Dua hal yang saya tulis saling meniadakan:
+
+- **T1 (D-04):** output harus **identik byte-per-byte** tiap dijalankan ulang.
+- **Narasi (D-06):** "kalau LLM, `method_version` wajib mencakup versi model + prompt".
+
+LLM tidak deterministik. `method_version` tidak bisa menangkap itu. Kalau narasi ditulis LLM, T1 tidak akan pernah lulus — dan tes yang tidak akan pernah lulus akan dimatikan orang dalam seminggu, lalu seluruh jaminan determinisme ikut mati bersamanya.
+
+### Keputusan
+**Narasi = render deterministik dari field terstruktur.** Bukan dikarang bebas.
+
+Artinya urutannya dibalik: `agreements[]`, `divergences[]`, `root_cause`, `limiters` **dihitung dulu** oleh aturan. Prosanya template dari field-field itu.
+
+### Alasan
+Efek sampingnya justru yang paling berharga: **S2 (wajib sitasi) jadi terpenuhi secara struktural, bukan diawasi.** Narasi tidak bisa mengatakan apa pun yang tidak ada di field terstruktur — bukan karena dilarang, tapi karena tidak ada bahannya. Klaim tanpa sitasi jadi mustahil ditulis, bukan sekadar melanggar aturan.
+
+Ini menutup celah terbesar yang tersisa di D-07: `synthesis` yang dikarang LLM bisa menyelundupkan penilaian yang tidak dimiliki modul manapun, dan tidak akan ada yang tahu.
+
+### Harga yang dibayar
+Prosanya lebih kaku dari contoh di mockup. Narasi template terbaca seperti template. Itu diterima — narasi di sini alat audit, bukan tulisan.
+
+### T1 dipecah
+Karena narasi kini turunan, T1 bisa lebih tajam:
+
+- **T1a — determinisme struktural:** field terstruktur (`stance`, `flag_responses[].impact`, `context_used`, `root_cause`) harus identik tiap dijalankan ulang dengan input sama. **Gate keras.**
+- **T1b — independensi urutan:** acak urutan eksekusi tiga modul → T1a tetap lulus.
+- **Narasi tidak diuji terpisah** — kalau field-nya identik, narasinya identik dengan sendirinya.
+
+### Kalau modul reasoning sendiri berbasis LLM
+Maka T1a **tidak akan lulus**, dan itu keputusan yang harus diambil sadar — bukan ditemukan saat tes merah. Pilihannya: modul berbasis aturan (T1a jadi gate keras), atau modul berbasis LLM (T1a turun jadi pemantauan bertoleransi, dan `method_version` wajib memuat `model_version` + `prompt_version`).
+
+**Belum diputuskan.** Tercatat di Keputusan Terbuka — dan ini bergantung pada isi kriteria modul, yang juga belum ada.
+
+---
+
+## D-11 — Catalyst Tracking & Confidence/Data Quality akhirnya punya kontrak
+
+**Status:** Aktif
+**Menyentuh:** `01_ARCHITECTURE/04_DATA_CONTRACTS.md`, `03_LAYER2_SPECS/05`, `10`
+
+### Masalah
+D-04 mengunci kontrak untuk semua paket — **kecuali dua ini**, dan tidak ada yang menyadarinya sampai audit.
+
+- **Catalyst Tracking (#10)** ada di daftar file, ada di diagram, disebut Speculative. Tapi tidak ada di kontrak data, tidak ada di `AggregatorOutput`, tidak punya slot di Knowledge. Di mockup dashboard, Speculative menyatakan "tidak ada katalis dalam 90 hari" — **diambil dari field yang tidak ada.**
+- **Confidence/Data Quality (#5)** punya komponen, tapi output-nya tidak pernah didefinisikan. Yang ada cuma `confidence` inline di `ModuleOutput`. Jadi #5 komponen atau bukan?
+
+Ini persis kelas lubang yang ditemukan di review pertama (Knowledge tidak menopang konsumennya), diulangi oleh orang yang menemukannya.
+
+### Keputusan
+
+**Catalyst → `CatalystSet`, dihasilkan di Fase A, bukan bagian Knowledge.**
+
+Katalis bukan fakta tentang keadaan perusahaan — ia fakta tentang kalender. Alasan utamanya **umur simpan**: `KnowledgeProfile` adalah potret pada `evidence_snapshot_date` dan seluruh isinya meluruh dengan laju yang sama. Katalis punya tanggal kedaluwarsa masing-masing — earnings 19 Juli mati pada 20 Juli, sementara margin 42% tidak. Menaruhnya di Knowledge berarti satu paket berisi field dengan laju luruh yang berbeda, dan itu akan salah dibaca cepat atau lambat.
+
+**Confidence → `ConfidenceReport`, Fase B (butuh peer).**
+
+Sekalian menjernihkan hubungan yang selama ini kabur:
+
+- `ConfidenceReport` = seberapa kuat **data** saham ini. Satu per ticker.
+- `ModuleOutput.confidence` = seberapa yakin **modul ini** pada kesimpulannya sendiri.
+- **Aturan: `ModuleOutput.confidence.score` ≤ `ConfidenceReport.overall.score`.** Modul tidak boleh lebih yakin pada kesimpulannya daripada data yang menopangnya. Ini validasi baru: **V6**.
+
+Tanpa V6, modul bisa mengaku yakin 90 di atas profil yang cuma 60% lengkap, dan tidak ada yang menghentikannya.
+
+### Biaya kalau dibalik
+Rendah untuk `ConfidenceReport`. Sedang untuk `CatalystSet` kalau sudah ada entri historis.
+
+---
+
 
 ## Keputusan Terbuka (Belum Diputuskan)
 
@@ -268,7 +450,7 @@ Dicatat di sini supaya tidak keliru dianggap sudah beres:
 - **TTL cache per jenis data** dan ukuran batch aman untuk `yfinance`.
 - **Budget waktu/call satu sesi penuh** — belum pernah dihitung. Lihat `04_DATA_SOURCES/05_RATE_LIMIT_CACHING_STRATEGY.md`.
 - **Spec `context_summary`** — kriteria & ambang. Bentuknya mengikuti pola D-07: memetakan di mana 12 komponen searah dan di mana bertentangan, bukan skor market.
-- **Siapa penulis narasi** — kalau LLM, `method_version`-nya wajib mencakup versi model + prompt.
+- **Modul reasoning: berbasis aturan atau LLM?** (D-10) Menentukan apakah T1a jadi gate keras atau pemantauan bertoleransi. Bergantung pada isi kriteria modul, yang belum ada.
 
 ---
 

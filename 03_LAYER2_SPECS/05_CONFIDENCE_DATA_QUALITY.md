@@ -32,6 +32,23 @@ Detail bobot tiap komponen di atas dan ambang kategori didiskusikan lebih lanjut
 
 Komponen Layer 1 yang derived/approximated (Business Cycle Stage, Money Flow, Market Sentiment) tunduk pada semangat prinsip yang sama (Prinsip #5) tapi **tidak** memakai skema skor formal di dokumen ini — mekanismenya cukup pernyataan eksplisit di level definisi komponen bahwa pembacaannya dikonstruksi/didekati (sudah ada di tiap spec Layer 1 terkait).
 
+## Kontrak & Hubungan dengan Confidence Modul (D-11)
+
+Menghasilkan `ConfidenceReport` — bentuknya di `01_ARCHITECTURE/04_DATA_CONTRACTS.md` §5c. Berjalan di **Fase B** karena butuh `peer_failures` & `low_sample_size` dari Peer.
+
+Sampai revisi ini komponen ini punya spec tapi **tidak punya output yang didefinisikan** — yang ada cuma `confidence` inline di `ModuleOutput`, sehingga tidak jelas #5 ini komponen atau bukan.
+
+Dua hal yang selama ini kabur, sekarang tegas:
+
+| | Mengukur | Jumlah |
+|---|---|---|
+| `ConfidenceReport` | seberapa kuat **data** saham ini | 1 per ticker |
+| `ModuleOutput.confidence` | seberapa yakin **modul ini** pada kesimpulannya | 3 per ticker |
+
+**Aturan V6 — `ModuleOutput.confidence.score` ≤ `ConfidenceReport.overall.score`.** Modul tidak boleh lebih yakin pada kesimpulannya daripada data yang menopangnya. Tanpa V6, modul bisa mengaku yakin 90 di atas profil yang 60% lengkap dan tidak ada yang menghentikannya.
+
+Kebalikannya tetap sah dan penting: modul **boleh** jauh kurang yakin dari data yang tersedia. Data lengkap tidak mewajibkan kesimpulan kuat — sering justru sebaliknya.
+
 ## Terhubung Dengan
 
 Knowledge (sumber perhitungan), Screening (flag awal yang jadi input), tiga modul reasoning (menerima & meneruskan confidence ke kesimpulannya masing-masing), Aggregator & Output (ditampilkan bersama hasil akhir).

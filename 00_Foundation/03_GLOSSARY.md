@@ -1,7 +1,7 @@
 # AlphaForge v2 — Glosarium
 
 **Status:** Aktif — revisi: istilah dari kontrak data & keputusan D-01..D-05 ditambahkan
-**Doc version:** 1.4.0
+**Doc version:** 1.5.0
 
 Istilah-istilah kunci yang dipakai konsisten di seluruh dokumen AlphaForge v2. Disusun per kelompok: konsep fondasi, istilah Layer 1, istilah Layer 2.
 
@@ -131,6 +131,18 @@ Lapisan tampilan untuk hasil kedua layer. Berjalan lokal tanpa server, membaca a
 
 **Context Summary**
 Kesimpulan kondisi market dari 12 komponen Layer 1 (Section 2 halaman Layer 1). **Dihasilkan Layer 1, bukan dashboard** — meringkas 12 pembacaan adalah sintesis, dan sintesis adalah reasoning: ia butuh `method_version`, confidence, dan jejak audit. Dilarang punya skor tunggal. Lihat D-06.
+
+**Masuk Lewat Lensa**
+Cara satu-satunya sampai ke halaman saham: tiga daftar terpisah (satu per modul), masing-masing diurutkan menurut kosakatanya sendiri, plus daftar Divergensi. Tidak pernah digabung. Dasarnya: **Prinsip #3 melarang MENGGABUNG lensa, bukan MENGURUTKAN di dalam satu lensa** — pembedaan yang selama ini tidak pernah dinyatakan. Lihat D-08.
+
+**Kosakata Stance**
+Tiap modul punya kosakata `stance` sendiri yang diturunkan dari pertanyaannya sendiri (`ruang_terbuka` vs `compounding_kuat` vs `asimetri_berkatalis`). Enum bersama yang lama (`compelling/interesting/weak`) adalah skala ordinal yang langsung berubah jadi hitungan suara. Kosakata terpisah membuat suara **tidak bisa dihitung karena operasinya tidak ada**. Pemetaan antar kosakata dilarang dibuat. Lihat D-09.
+
+**Catalyst Set**
+Katalis terjadwal per ticker, dihasilkan Fase A. **Bukan bagian Knowledge** — alasannya umur simpan: isi Knowledge meluruh serempak dari satu `evidence_snapshot_date`, katalis punya kedaluwarsa masing-masing. Lihat D-11.
+
+**Confidence Report vs Confidence Modul**
+`ConfidenceReport` (1 per ticker) mengukur kekuatan **data**. `ModuleOutput.confidence` (3 per ticker) mengukur keyakinan **modul pada kesimpulannya sendiri**. Aturan V6: yang kedua tidak boleh melebihi yang pertama. Sebaliknya boleh — data lengkap tidak mewajibkan kesimpulan kuat.
 
 **Synthesis (Peta Konvergensi)**
 Bagian yang memetakan di mana ketiga modul reasoning sepakat, di mana berbeda, dan **kenapa** berbeda (`root_cause`). Bukan verdict: verdict memampatkan tiga dimensi jadi satu lalu membuang sisanya; `synthesis` menunjuk balik ke tiga hasil dan tidak menggantikannya — daftar isi, bukan pengganti isi. Confidence-nya = terendah dari tiga modul, bukan rata-rata. Ditampilkan di bawah tiga kolom, tidak di atas. Uji pembedanya: kalau bisa dibaca sendirian dan terasa cukup, ia sudah jadi verdict. Lihat D-07.

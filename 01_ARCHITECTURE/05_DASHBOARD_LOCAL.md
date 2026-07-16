@@ -1,7 +1,7 @@
 # Dashboard Lokal
 
 **Status:** Aktif
-**Doc version:** 1.1.0
+**Doc version:** 2.0.0
 
 ---
 
@@ -96,6 +96,41 @@ Section 2 wajib menampilkan **berapa komponen yang degraded/missing** secara men
 
 ---
 
+## 3b. Halaman Daftar — Masuk Lewat Lensa (D-08)
+
+Sampai revisi ini dashboard tidak punya rute masuk. Ia menampilkan satu saham, sementara pipeline menghasilkan 1.500–3.000. Tidak pernah ada yang menjawab bagaimana sampai ke halaman itu.
+
+**Tidak ada satu daftar. Ada tiga, plus satu.**
+
+```
+  ┌────────────────┬────────────────┬────────────────┬──────────────┐
+  │  Multibagger   │ Quality/Comp.  │  Speculative   │  Divergensi  │
+  │  urut menurut  │  urut menurut  │  urut menurut  │  urut menurut│
+  │  kosakatanya   │  kosakatanya   │  kosakatanya   │  selisih     │
+  │  sendiri       │  sendiri       │  sendiri       │  antar lensa │
+  └────────┬───────┴────────┬───────┴────────┬───────┴──────┬───────┘
+           └────────────────┴────────┬───────┴──────────────┘
+                                     ▼
+                   Halaman saham — TIGA lensa, termasuk
+                   dua yang tadi tidak kamu pakai
+```
+
+Kamu memilih **pertanyaanmu** dulu, bukan sahamnya. Lalu di halaman saham kamu berhadapan dengan dua lensa yang tidak kamu pilih. Itu urutan yang benar: datang dengan pertanyaan, lalu diperlihatkan bahwa ada dua pertanyaan lain yang tidak kamu tanyakan.
+
+Bandingkan dengan satu daftar berperingkat: kamu datang tanpa pertanyaan, sistem menyodorkan jawaban, dan tiga lensa jadi lampiran yang dibaca setelah keputusan sudah terbentuk. Itu v1 dengan langkah tambahan.
+
+| # | Aturan mengikat |
+|---|---|
+| L1 | Tiga daftar **tidak pernah digabung** — tidak ada tampilan yang mencampur peringkat lintas lensa |
+| L2 | **Tidak ada kolom lensa lain** di daftar lensa. Daftar Multibagger tidak boleh menampilkan stance Quality — itu penggabungan lewat pintu samping |
+| L3 | Pengurutan memakai kosakata lensa itu sendiri (D-09), jadi lintas daftar tidak ada operasi banding |
+| L4 | Halaman saham **selalu** menampilkan ketiganya, lewat daftar mana pun masuknya |
+| L5 | Daftar Divergensi mengurut menurut jumlah & kedalaman divergensi, **tidak pernah** menurut stance |
+
+**Daftar Divergensi** diurutkan dari `synthesis.divergences[]`. Ini bukan peringkat kualitas — ini peringkat **seberapa banyak yang bisa dipelajari**. Saham yang ketiganya sepakat tidak mengajarkan apa pun yang tidak bisa didapat dari satu lensa; saham yang ketiganya berselisih adalah satu-satunya tempat multi-lens membayar dirinya sendiri.
+
+Tiap baris daftar menampilkan: ticker, stance lensa itu, confidence, jumlah flag. **Tidak lebih.** Baris daftar bukan tempat meringkas — ia tempat memutuskan mau klik atau tidak.
+
 ## 4. Halaman Layer 2 — Analisa Saham
 
 Sumber: `AggregatorOutput` (`04_DATA_CONTRACTS.md` §7) + `KnowledgeProfile` yang dirujuknya.
@@ -133,8 +168,8 @@ Tiap modul menampilkan seluruh isi `ModuleOutput`-nya:
 
 | Elemen | Kenapa wajib tampil |
 |---|---|
-| `stance` + `stance_rationale` | Kesimpulan modul ini, beserta alasannya |
-| `confidence.score` + `band` + **`limiters`** | Limiters yang bikin skor confidence bermakna. Angka tanpa limiter cuma dekorasi |
+| `stance` + `stance_rationale` | Kesimpulan modul ini, dalam **kosakatanya sendiri** (D-09) — tidak sebanding dengan modul lain, dan memang tidak boleh dibandingkan |
+| `confidence.score` + `band` + **`limiters`** | Limiters yang bikin skor confidence bermakna. Angka tanpa limiter cuma dekorasi. **Warnanya wajib netral** — lihat §4b |
 | `flag_responses[]` | **Bukti Prinsip #4 dipatuhi.** Tiap red flag + bagaimana modul ini meresponsnya |
 | `context_used[]` | **Ini jawaban langsung untuk "komponen mana yang benar-benar ngaruh"** — komponen Layer 1 mana yang mempengaruhi stance, dan bagaimana |
 | `knowledge_gaps[]` | Field kosong yang membatasi kesimpulan ini |
@@ -168,6 +203,16 @@ Tiap sitasi bisa diklik ke field asalnya di Section 1 atau ke kolom modul di ata
 
 > **Uji pembeda, dipakai saat review tampilan:** kalau bagian ini bisa dibaca tanpa tiga kolom di atasnya dan tetap terasa cukup, ia sudah berubah jadi verdict dan D-07 perlu diperketat. `synthesis` yang benar justru **tidak berguna** sendirian — ia menunjuk ke atas.
 
+### 4b. Confidence Tidak Boleh Diwarnai Seperti Kualitas
+
+Aturan yang lahir dari kesalahan di mockup pertama: confidence 78 diberi bar cyan, confidence 54 diberi bar ochre. Cyan terbaca positif, ochre terbaca peringatan — sekali lihat, modul dengan confidence tertinggi terbaca sebagai pemenang.
+
+Padahal **confidence mengukur kekuatan data, bukan daya tarik**. Modul bisa sangat yakin bahwa sesuatu itu buruk: `bukan_compounder` dengan confidence 88 adalah kesimpulan kuat, bukan kesimpulan bagus.
+
+**Aturan:** bar dan angka confidence memakai **satu warna netral** di ketiga modul, tanpa gradasi semantik. Warna dipakai untuk `kind` (direct/derived), status (missing/degraded), dan flag — tidak untuk confidence, dan tidak untuk stance.
+
+Stance juga tidak boleh diwarnai menurut "bagusnya", karena kosakata tiga modul tidak sebanding (D-09) — mewarnai `ruang_terbuka` hijau dan `ruang_tertutup` merah akan mengembalikan sumbu bersama lewat warna.
+
 ## 5. Yang Perlu Ditambahkan ke Pipeline
 
 Dashboard ini butuh tiga hal yang **belum ada** di kontrak data. Semuanya dihasilkan pipeline, bukan dashboard (prinsip 2.1 & 2.2):
@@ -178,15 +223,17 @@ Dashboard ini butuh tiga hal yang **belum ada** di kontrak data. Semuanya dihasi
 | `MarketContextPackage.context_summary` | Layer 1, per sesi | Kesimpulan Section 2 halaman Layer 1. `kind=derived`, punya `method_version` + confidence. Lihat D-06 |
 | `ModuleOutput.stance_rationale` | Layer 2, per modul | Sudah ada di kontrak D-04 — pastikan terisi, bukan opsional |
 | `AggregatorOutput.synthesis` | Layer 2, per saham | Peta konvergensi/divergensi (D-07). `kind` sintesis — punya `method_version` & confidence |
+| `AggregatorOutput.catalysts` | Fase A, per ticker | `CatalystSet` (D-11) — sebelumnya dirujuk Speculative tanpa punya field di mana pun |
+| `AggregatorOutput.confidence_report` | Fase B, per ticker | `ConfidenceReport` (D-11) — output komponen #5 yang selama ini tak pernah didefinisikan |
 
-Perubahan ini menaikkan `04_DATA_CONTRACTS.md` ke versi 1.2.0.
+Perubahan ini menaikkan `04_DATA_CONTRACTS.md` ke versi 2.0.0.
 
 ---
 
 ## 6. Yang Masih Perlu Diputuskan
 
 - **D-06** — spec `context_summary`: kriteria, ambang, apa yang membuatnya "degraded".
-- **Siapa yang menulis narasi.** Kalau LLM, ia butuh `method_version` yang mencakup versi model + prompt — kalau tidak, narasi lama tidak bisa direproduksi dan Prinsip #6 bocor lewat pintu ini.
+- **Modul reasoning: berbasis aturan atau LLM?** (D-10) Narasi sudah diputuskan deterministik — dirender dari field terstruktur, bukan dikarang. Tapi kalau modulnya sendiri LLM, T1a tetap tidak lulus. Bergantung pada isi kriteria modul, yang belum ada.
 - **Riwayat sesi.** Dashboard menampilkan sesi terakhir saja, atau bisa telusuri sesi lama dari Historical Tracking? Yang kedua jauh lebih berguna untuk mengevaluasi reasoning, tapi butuh format penyimpanan yang sudah stabil.
 - **Teknologi.** Static HTML dari template, atau app lokal. Belum diputuskan — tapi apa pun pilihannya, prinsip 2.1 mengikat.
 
