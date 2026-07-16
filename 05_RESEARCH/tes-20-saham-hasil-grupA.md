@@ -6,6 +6,12 @@
 
 ---
 
+> **⚠ KOREKSI 16 Juli (setelah dokumen ini ditulis):** verdict `compounding_rapuh` untuk MSFT di bawah **direvisi jadi `compounding_kuat`** setelah gut-check pemilik produk. Kriteria awal tidak membedakan margin turun karena reinvestasi terdanai kekuatan (kasus MSFT — revenue tetap +18%, CapEx dijelaskan eksplisit sebagai kapasitas AI) dari margin turun karena erosi (kasus INTC — rugi di segmen yang belum profit). Detail koreksi & tes pembeda baru: `00_Foundation/04_DECISIONS.md` D-13, dan `03_LAYER2_SPECS/08_MODULE_QUALITY_COMPOUND.md`. Isi asli di bawah **dibiarkan apa adanya** sebagai jejak — ini yang ditemukan sebelum koreksi, bukan kesimpulan final.
+>
+> Argumen inti dokumen ini (§3: jumlah divergensi ≠ informasi, lahirnya metrik `surprise`) **tetap berdiri** — cuma verdict MSFT-nya yang berubah.
+
+---
+
 ## 0. Ringkasan
 
 Dugaan saya di draft: *"bahkan dengan akses field dibatasi, grup A tetap akan sepakat."*

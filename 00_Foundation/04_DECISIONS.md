@@ -542,9 +542,19 @@ Trajectory butuh dua bahan berbeda sifat: struktur (seberapa besar ruangnya) dan
 |---|---|---|---|---|
 | **INTC** | `ruang_tak_terbaca`\* | `bukan_compounder` (GAAP −0.73, foundry loss $2.4B/kuartal, restructuring $4.1B) | `asimetri_berkatalis` (18A ramp, guidance $1.3B di atas konsensus) | `different_fields` |
 | **PG** | `ruang_tertutup` (organic +3%, kategori mapan) | `compounding_kuat` (FCF productivity 82%, dividen 70 tahun) | `tanpa_asimetri` | `different_fields`, tapi ketiganya searah negatif-untuk-multibagger |
-| **MSFT** | `ruang_sempit` (Azure +40%, tapi sudah di-price) | `compounding_rapuh` (GM 67.6% tersempit sejak 2022, capex naik 61% dengan $25M cuma inflasi komponen) | `asimetri_berkatalis` (restrukturisasi OpenAI, capex $3.4B di bawah konsensus) | `different_fields` |
+| **MSFT** | `ruang_sempit` (Azure +40%, tapi sudah di-price) | `compounding_kuat` — *direvisi dari `compounding_rapuh`, lihat koreksi di bawah* (GM 67.6% tersempit sejak 2022, tapi revenue tetap +18% dan CapEx $190B dijelaskan eksplisit sebagai kapasitas AI — lolos tes reinvestasi-vs-erosi) | `asimetri_berkatalis` (restrukturisasi OpenAI, capex $3.4B di bawah konsensus) | `different_fields` |
 
 \*Revisi dari klaim sebelumnya (`ruang_terbuka`) — di bawah kriteria trajectory, external foundry $174M dari basis nyaris nol bukan kurva yang sudah kelihatan.
+
+### Koreksi 16 Juli (lanjutan) — Reinvestasi ≠ Erosi
+
+Gut-check pemilik produk terhadap MSFT: kriteria Quality awal (*"margin/FCF turun → `compounding_rapuh`"*) tidak membedakan **margin turun karena reinvestasi terdanai kekuatan** dari **margin turun karena erosi**. MSFT jatuh di kategori pertama — revenue tetap +18%, Azure re-akselerasi ke 40%, CapEx $190B dijelaskan eksplisit sebagai kapasitas AI di filing — dan seharusnya `compounding_kuat`, bukan `compounding_rapuh`.
+
+**Tes pembeda yang ditambahkan** (di `03_LAYER2_SPECS/08_MODULE_QUALITY_COMPOUND.md`): sebelum menilai arah margin, cek apakah penurunan didanai kekuatan (revenue tetap kuat, level margin/FCF absolut masih tinggi, CapEx naik dengan alasan terungkap di filing) atau tanda erosi (revenue ikut melambat, tidak ada penjelasan, atau kerugian di segmen yang seharusnya sudah profit).
+
+**Field baru:** tren CapEx (nominal & % revenue, beserta alasan terungkap kalau ada) ditambahkan ke bagian 2 Knowledge (`03_KNOWLEDGE.md`) — dibutuhkan supaya tes pembeda ini bisa dijalankan. Bukan pelanggaran D-12: field ini tetap di bagian 2, yang sudah jadi akses penuh Quality; bukan field baru dari 3b yang dilarang.
+
+**Ini contoh D-13 bekerja sebagaimana mestinya** — draft komitmen dua penulis, direvisi begitu pemilik produk merasa ada yang salah, bukan dipertahankan karena sudah tertulis rapi. Pembalikan verdict MSFT juga mengubah pola `synthesis`-nya: sebelumnya PG dan MSFT sama-sama 3-label-berbeda (bukti utama D-14 soal `surprise`); dengan MSFT sekarang `ruang_sempit`+`compounding_kuat`+`asimetri_berkatalis`, agreement baru muncul secara implisit antara Multibagger dan Quality (dua-duanya condong positif), sementara Speculative sendirian menyoal katalis. Argumen inti D-14 (jumlah divergensi ≠ informasi) tetap berdiri — cuma contoh angkanya perlu dihitung ulang begitu kriteria final dipakai ke populasi sungguhan, bukan tiga kasus manual.
 
 **Temuan penting dari pembuktian ini, bukan cuma dari kriterianya:** PG dan MSFT sama-sama menghasilkan 3 label berbeda — skor "jumlah divergensi" identik. Tapi PG bisa ditebak sepenuhnya dari satu lensa (sepakat implisit); MSFT tidak bisa. **Jumlah label berbeda bukan ukuran informasi — yang ukuran informasi adalah seberapa tidak terduga kombinasinya dibanding populasi.** Ini melahirkan D-14.
 

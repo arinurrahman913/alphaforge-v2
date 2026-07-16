@@ -36,7 +36,9 @@ Profil per ticker, lima bagian tetap (field kosong ditandai `null` + status `mis
 
 **1. Identitas & Klasifikasi** — ticker, exchange, sektor/industri, tier ukuran (dari flag Screening: micro/small/mid/large-cap), status instrumen (mis. `adr`, `recent_ipo` — diteruskan apa adanya dari flag Screening).
 
-**2. Kesehatan Finansial** — tren revenue (YoY 4 kuartal terakhir, CAGR 3 & 5 tahun kalau data cukup), tren margin (gross/operating/net, per kuartal), struktur balance sheet (debt-to-equity, current ratio, posisi kas), tren cash flow (FCF per kuartal, FCF margin).
+**2. Kesehatan Finansial** — tren revenue (YoY 4 kuartal terakhir, CAGR 3 & 5 tahun kalau data cukup), tren margin (gross/operating/net, per kuartal), struktur balance sheet (debt-to-equity, current ratio, posisi kas), tren cash flow (FCF per kuartal, FCF margin), **tren CapEx (nominal & sebagai % revenue, beserta alasan yang diungkapkan manajemen kalau ada di filing/rilis — mis. "kapasitas AI" vs tanpa penjelasan)**.
+
+> Field CapEx ditambahkan setelah koreksi D-13 (16 Juli): tanpa ini, Quality tidak bisa membedakan margin turun karena *reinvestasi terdanai* dari margin turun karena *erosi* — dua situasi yang butuh kesimpulan berlawanan.
 
 **3a. Posisi Kompetitif — Struktur (D-13)** — kategori model bisnis kalau bisa ditentukan dari data (mis. subscription/hardware/marketplace), konsentrasi revenue per segmen bisnis (dari 10-K kalau tersedia), skala absolut (revenue TTM, jumlah karyawan kalau ada), estimasi ukuran TAM kalau tersedia dari filing/riset pihak ketiga yang dikutip perusahaan.
 

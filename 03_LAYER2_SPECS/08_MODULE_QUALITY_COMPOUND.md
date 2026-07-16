@@ -1,7 +1,7 @@
 # Module — Quality / Compound
 
 **Status:** Aktif — revisi: kontrak output & aturan validasi flag ditambahkan (D-04)
-**Doc version:** 3.0.0
+**Doc version:** 3.1.0
 
 ## Definisi
 
@@ -55,14 +55,22 @@ Aturan validasi yang berlaku ke modul ini (output **ditolak** kalau gagal):
 
 **Kenapa tidak boleh membaca 3b (momentum) atau `CatalystSet`:** mesin yang awet tidak perlu sedang berakselerasi untuk dianggap awet. Kalau Quality boleh melihat momentum, ia perlahan tergoda mengandalkannya dan menempel ke Multibagger — dua lensa jadi satu lensa berbaju dua (D-12).
 
+### Koreksi (16 Juli, gut-check pemilik produk): Reinvestasi ≠ Erosi
+
+Versi awal: *"margin/FCF mulai turun → `compounding_rapuh`"*, tanpa peduli **kenapa** turunnya. Itu salah, dan kasus MSFT yang membuktikannya — margin turun karena CapEx $190B buat kapasitas AI, bukan karena kalah bersaing. Revenue tetap +18%, Azure re-akselerasi ke 40%, FCF masih deras cuma lagi ketutup investasi. Itu mesin yang lagi nambah bahan bakar, bukan mesin yang bocor. Kriteria lama tidak membedakan itu dari INTC, yang rugi $2.4B di segmen yang **memang belum profit** plus writedown $4.1B mengakui akuisisi lama gagal — situasi yang secara kategori berbeda.
+
+**Tes pembeda, sebelum menilai arah margin:** apakah penurunan margin **didanai kekuatan** (revenue tetap kuat/berakselerasi, level margin & FCF absolut masih jauh di atas ambang gagal, CapEx naik dengan alasan terungkap di filing) — atau **tanda erosi** (revenue ikut melambat/turun, tidak ada penjelasan reinvestasi, atau kerugian di segmen yang seharusnya sudah profit)?
+
 | Stance | Syarat |
 |---|---|
-| `compounding_kuat` | Margin (gross/operating) stabil atau naik N periode terakhir · FCF positif berturut · konsentrasi revenue di bawah ambang · percentile margin peer di atas median · tanpa flag governance severity tinggi yang belum direspons |
-| `compounding_rapuh` | Margin/FCF mulai turun, tapi 3a (model bisnis, posisi kompetitif) masih utuh — mesin melambat, belum berubah bentuk |
-| `bukan_compounder` | Kerugian struktural di bisnis inti, atau restatement, atau margin & FCF negatif bersamaan — mesin sudah jadi mesin lain |
-| `mesin_tak_terbaca` | Field kunci di 2/3a/7 `missing` melewati ambang |
+| `compounding_kuat` | Margin stabil/naik, **ATAU** margin turun tapi revenue tetap kuat/berakselerasi **dan** level margin & FCF absolut masih tinggi **dan** penurunan dijelaskan CapEx/reinvestasi terungkap (bukan tekanan biaya/kompetisi) · FCF positif berturut · konsentrasi revenue di bawah ambang · percentile margin peer di atas median · tanpa flag governance severity tinggi. Kalau masuk lewat jalur reinvestasi, tempelkan `limiter: "margin tertekan siklus reinvestasi — pantau apakah revenue/margin pulih dalam N kuartal"` |
+| `compounding_rapuh` | Margin/FCF turun **dan** revenue ikut melambat/flat, **atau** penurunan tidak dijelaskan CapEx/reinvestasi — tanda erosi, bukan investasi terencana. 3a (model bisnis, posisi kompetitif) masih utuh |
+| `bukan_compounder` | Kerugian struktural di segmen yang seharusnya sudah profit, atau restatement, atau margin & FCF negatif bersamaan tanpa penjelasan reinvestasi — mesin sudah jadi mesin lain |
+| `mesin_tak_terbaca` | Field kunci di 2/3a/7 `missing` melewati ambang, termasuk kalau alasan CapEx tidak terungkap di filing (tidak bisa menjalankan tes pembeda) |
 
-**Draft komitmen pertama, diuji ke 3 kasus (D-13):** PG → `compounding_kuat` (FCF productivity 82%, dividen naik 70 tahun berturut). INTC → `bukan_compounder` (GAAP EPS −0.73, foundry operating loss $2.4B/kuartal, restructuring $4.1B). **MSFT → `compounding_rapuh`** — GM 67.6% tersempit sejak 2022, capex kalender 2026 naik 61% dengan $25B dari itu murni inflasi harga komponen (bukan kapasitas tambahan). Diambil **tanpa pernah melihat Azure +40%** (itu 3b) — pembuktian langsung bahwa D-12 menghasilkan stance yang berbeda dari kalau semua field dibuka.
+**Draft komitmen v2, diuji ke 3 kasus, direvisi 16 Juli setelah gut-check:** PG → `compounding_kuat` (FCF productivity 82%, dividen naik 70 tahun berturut). INTC → `bukan_compounder` (foundry operating loss $2.4B/kuartal di segmen yang belum profit, restructuring $4.1B mengakui akuisisi gagal — bukan reinvestasi, tapi menutup lubang). **MSFT → `compounding_kuat` (revisi dari `compounding_rapuh`)** — GM 67.6% memang tersempit sejak 2022, tapi revenue tetap +18% dan CapEx $190B dijelaskan eksplisit sebagai kapasitas AI di filing. Lolos tes pembeda: didanai kekuatan, bukan tanda erosi. Ditempeli `limiter: "margin tertekan siklus reinvestasi AI — pantau pemulihan margin 3-4 kuartal ke depan"`.
+
+Ini tetap **tanpa pernah melihat Azure +40%** (itu 3b, tetap tidak diakses) — koreksinya bukan membuka akses field baru, tapi memperbaiki *bagaimana* field yang sudah diakses (bagian 2: revenue growth, CapEx beserta alasannya) dipakai menilai arah margin.
 
 Kosakata ini **tidak dipakai modul lain dan tidak bisa dipetakan ke kosakata modul lain** — pemetaan semacam itu dilarang dibuat (D-09). Versi sebelumnya memakai satu enum bersama (`compelling/interesting/weak`) untuk ketiga modul; itu skala ordinal yang langsung berubah jadi hitungan suara di kepala pembaca.
 

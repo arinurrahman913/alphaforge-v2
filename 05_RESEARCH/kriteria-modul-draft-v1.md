@@ -6,6 +6,10 @@
 
 ---
 
+> **⚠ KOREKSI 16 Juli (setelah dokumen ini ditulis):** tabel kriteria Quality di bawah **sudah digantikan** versi yang membedakan reinvestasi vs erosi — lihat `03_LAYER2_SPECS/08_MODULE_QUALITY_COMPOUND.md` untuk tabel final dan `00_Foundation/04_DECISIONS.md` D-13 untuk kronologi koreksinya. Verdict MSFT di dokumen ini (`compounding_rapuh`) sudah tidak berlaku — direvisi jadi `compounding_kuat`. Dibiarkan apa adanya sebagai jejak draft pertama.
+
+---
+
 ## 0. Ini Sekarang Punya Siapa
 
 Kamu bilang "percayakan ke saya sebagai arsitek." Saya kerjakan — tapi harus jujur soal apa artinya itu.

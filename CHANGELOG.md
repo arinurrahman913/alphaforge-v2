@@ -31,6 +31,20 @@ Penggantinya: `surprise(ticker) = −log P(kombinasi stance | populasi sesi ini)
 
 ---
 
+## 2026-07-16 (lanjutan) — Koreksi D-13: Reinvestasi ≠ Erosi
+
+Gut-check pemilik produk terhadap verdict MSFT (`compounding_rapuh`) menemukan cacat nyata: kriteria Quality awal menyamakan "margin turun karena reinvestasi terdanai kekuatan" dengan "margin turun karena erosi". Dua situasi yang butuh kesimpulan berlawanan.
+
+- **MSFT direvisi:** `compounding_rapuh` → **`compounding_kuat`** (dengan limiter siklus reinvestasi). Revenue tetap +18%, Azure re-akselerasi 40%, CapEx $190B dijelaskan eksplisit sebagai kapasitas AI di filing — lolos tes pembeda. INTC tetap `bukan_compounder`: rugi $2.4B di segmen yang **belum profit**, plus writedown $4.1B mengakui akuisisi gagal — bukan reinvestasi, menutup lubang.
+- **Tes pembeda ditambahkan** ke `08_MODULE_QUALITY_COMPOUND.md`: sebelum menilai arah margin, cek revenue tetap kuat + level margin/FCF absolut masih tinggi + CapEx dijelaskan di filing (→ tetap `compounding_kuat`) vs revenue ikut melambat + tanpa penjelasan (→ `compounding_rapuh`/`bukan_compounder`).
+- **Field baru:** tren CapEx (nominal, % revenue, alasan terungkap) ditambahkan ke bagian 2 Knowledge — dalam akses Quality yang sudah ada, bukan pelanggaran D-12.
+- `05_RESEARCH/` **tidak ditulis ulang** — ditandai catatan koreksi di bagian atas file terkait, supaya jejak "apa yang ditemukan lebih dulu" tetap terlihat.
+- Argumen inti D-14 (jumlah divergensi ≠ informasi) tetap berdiri; angka `surprise` di contoh perlu dihitung ulang begitu kriteria dijalankan ke populasi sungguhan.
+
+**Ini D-13 bekerja sebagaimana mestinya:** draft dua penulis, direvisi begitu pemilik produk merasa ada yang salah — bukan dipertahankan karena sudah tertulis rapi.
+
+---
+
 ## 2026-07-16 — Dashboard Lokal (D-06, D-07)
 
 Rombakan lapisan tampilan. Pemicunya: transparansi — hasil keluar, tapi angka & alasan di baliknya tidak kelihatan.
