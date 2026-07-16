@@ -1,6 +1,8 @@
 # Liquidity Conditions
 
-**Status:** Aktif
+**Status:** Aktif — revisi: kind ditambahkan (Prinsip #5)
+**Doc version:** 1.1.0
+**Kind:** direct
 
 ## Definisi
 
@@ -18,9 +20,13 @@ FRED — Fed balance sheet (total assets), M2 money supply growth, credit spread
 
 Pantau tren Fed balance sheet dan M2 growth rate; kombinasikan dengan credit spread untuk membaca apakah kondisi sedang mengetat atau melonggar.
 
-## Dipakai Oleh
+## Input Dari
 
-Business Cycle Stage (saling terkait), Quality/Compound Module (biaya modal & valuasi jangka panjang).
+Tidak ada komponen Layer 1 lain — dihitung dari seri FRED. Komponen leaf.
+
+## Digunakan Oleh
+
+Quality/Compound Module (biaya modal & valuasi jangka panjang), ketiga modul sebagai konteks makro.
 
 ---
 

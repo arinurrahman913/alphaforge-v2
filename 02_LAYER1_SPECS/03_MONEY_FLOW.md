@@ -1,6 +1,9 @@
 # Money Flow
 
-**Status:** Aktif
+**Status:** Aktif — revisi: method_version & kind ditambahkan (Prinsip #5, #6)
+**Doc version:** 1.1.0
+**Method version:** 1.0.0
+**Kind:** derived / approximated
 
 ## Definisi
 
@@ -18,9 +21,15 @@ Data resmi granular (EPFR, Lipper) berbayar. Pendekatan gratis: proxy dari volum
 
 Gunakan kombinasi volume abnormal + pergerakan harga di sector ETF sebagai proxy arah aliran dana. Ini pendekatan derived/approximated, bukan data flow yang presisi.
 
-## Dipakai Oleh
+## Input Dari
 
-Sector Rotation (saling melengkapi), ketiga modul reasoning sebagai bagian dari konteks makro.
+Tidak ada komponen Layer 1 lain — dihitung dari volume & price action sector ETF. Komponen leaf.
+
+> Money Flow dan Sector Rotation sama-sama membaca sector ETF, tapi **tidak saling memberi input**. Versi sebelumnya menulis "saling melengkapi" — itu menggambarkan kedekatan tema, bukan aliran data.
+
+## Digunakan Oleh
+
+Ketiga modul reasoning sebagai bagian dari konteks makro.
 
 ---
 

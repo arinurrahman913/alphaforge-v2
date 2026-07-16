@@ -1,6 +1,8 @@
 # Market Regime / Trend
 
-**Status:** Aktif
+**Status:** Aktif — revisi: kind ditambahkan (Prinsip #5)
+**Doc version:** 1.1.0
+**Kind:** direct
 
 ## Definisi
 
@@ -18,9 +20,15 @@ Yahoo Finance — harga index utama (S&P 500, Nasdaq Composite).
 
 Bandingkan posisi harga index terhadap MA50 dan MA200 untuk mengklasifikasikan regime.
 
-## Dipakai Oleh
+## Input Dari
 
-Market Breadth (saling melengkapi), Multibagger & Speculative Module (relevan untuk timing).
+Tidak ada komponen Layer 1 lain — dihitung dari harga index utama. Komponen leaf.
+
+> Market Regime dan Market Breadth sama-sama membaca kesehatan market dari sudut berbeda, tapi tidak saling memberi input. "Saling melengkapi" di versi sebelumnya menggambarkan tema, bukan dependensi.
+
+## Digunakan Oleh
+
+Multibagger & Speculative Module (relevan untuk timing).
 
 ---
 

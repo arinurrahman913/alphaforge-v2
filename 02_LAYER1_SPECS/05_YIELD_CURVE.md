@@ -1,6 +1,8 @@
 # Yield Curve
 
-**Status:** Aktif
+**Status:** Aktif — revisi: kind ditambahkan (Prinsip #5)
+**Doc version:** 1.1.0
+**Kind:** direct
 
 ## Definisi
 
@@ -18,9 +20,13 @@ FRED atau Treasury.gov — gratis, data resmi.
 
 Ambil spread antar tenor kunci (misal 10Y-2Y) untuk menentukan apakah curve normal, flat, atau inverted.
 
-## Dipakai Oleh
+## Input Dari
 
-Business Cycle Stage, Quality/Compound Module (biaya modal), Liquidity Conditions (saling terkait).
+Tidak ada komponen Layer 1 lain — dihitung dari seri FRED/Treasury. Komponen leaf.
+
+## Digunakan Oleh
+
+Quality/Compound Module (biaya modal), ketiga modul sebagai konteks makro.
 
 ---
 

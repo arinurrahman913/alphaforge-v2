@@ -1,6 +1,7 @@
 # AlphaForge v2 — Glosarium
 
-**Status:** Aktif — revisi untuk kelengkapan cakupan & konsistensi dengan `02_PRINCIPLES.md`
+**Status:** Aktif — revisi: istilah dari kontrak data & keputusan D-01..D-05 ditambahkan
+**Doc version:** 2.0.0
 
 Istilah-istilah kunci yang dipakai konsisten di seluruh dokumen AlphaForge v2. Disusun per kelompok: konsep fondasi, istilah Layer 1, istilah Layer 2.
 
@@ -13,6 +14,12 @@ Kumpulan hasil dari 12 komponen Layer 1, digabung jadi satu paket konteks yang d
 
 **Derived/Approximated Data**
 Data yang tidak tersedia lewat satu API siap pakai, tapi dikonstruksi dari kombinasi beberapa sumber data mentah gratis (misal Business Cycle Stage, Money Flow, Market Sentiment). Sesuai Prinsip #5 (`02_PRINCIPLES.md`), komponen berkategori ini wajib secara eksplisit menyatakan dirinya sebagai pembacaan yang dikonstruksi/didekati — bukan angka resmi tunggal dari satu sumber otoritatif — supaya tidak keliru dianggap sekuat data langsung seperti VIX atau DXY.
+
+**Method Version**
+Versi *formula* sebuah komponen (semver), beda dari versi dokumennya. Wajib untuk komponen derived/approximated, dan wajib ikut tercatat di tiap entri Historical Tracking (Prinsip #6). Perubahan logika yang mengubah hasil wajib menaikkannya — tanpa ini, audit di masa depan bisa membandingkan kesimpulan lama dengan formula yang sudah berbeda tanpa disadari.
+
+**Kind (`direct` / `derived`)**
+Penanda yang menempel di tiap pembacaan komponen Layer 1. `direct` = satu angka dari satu sumber otoritatif (VIX, DXY). `derived` = dikonstruksi sendiri dari kombinasi sumber (Business Cycle Stage, Money Flow, Market Breadth, Market Sentiment). Ada supaya Prinsip #5 ikut mengalir bersama datanya ke Layer 2, bukan berhenti sebagai kalimat di dokumen spec. Lihat `01_ARCHITECTURE/04_DATA_CONTRACTS.md`.
 
 ---
 
@@ -102,6 +109,58 @@ Komponen akhir Layer 2 yang menyusun hasil dari ketiga modul reasoning untuk dit
 
 **Historical Tracking / Decision Journal**
 Mekanisme penyimpanan hasil analisa dari waktu ke waktu, dipakai untuk memvalidasi apakah kesimpulan sistem terbukti akurat di kemudian hari. Sesuai Prinsip #6 (revisi, `02_PRINCIPLES.md`), setiap entri historis harus turut mencatat versi metodologi/formula yang dipakai saat itu, khususnya untuk komponen derived/approximated. Implementasinya boleh menyusul (v2.1) setelah alur inti Screening→Output berjalan — ini pengecualian yang diakui secara eksplisit di Prinsip #6, bukan berarti komponennya kurang penting.
+
+**Fase A / Fase B & Barrier**
+Layer 2 berjalan dua fase, bukan satu alur lurus. **Fase A** (Evidence → Knowledge) berjalan per-ticker dan bisa paralel penuh. **Barrier** adalah titik tunggu sampai Knowledge seluruh kandidat selesai. **Fase B** (Peer → Confidence → Risk → 3 modul → Aggregator) butuh populasi utuh karena Peer membandingkan antar ticker. Barrier ini konsekuensi tak terhindarkan dari memakai populasi hasil screening sendiri sebagai sumber peer — lihat D-03 di `00_Foundation/04_DECISIONS.md`.
+
+**Module Output**
+Bentuk baku hasil tiap modul reasoning: `stance`, `confidence`, `flag_responses`, `context_used`, `knowledge_gaps`. **Identik untuk ketiga modul** — wadah yang seragam justru yang membuat tiga pandangan bisa ditampilkan berdampingan tanpa harus disamakan isinya. Yang wajib berbeda antar modul adalah kriteria dan kesimpulannya, bukan struktur laporannya. Dikunci di `01_ARCHITECTURE/04_DATA_CONTRACTS.md` §6.
+
+**Flag Response**
+Entri wajib di `ModuleOutput` untuk **setiap** flag severity tinggi yang menempel di Knowledge. Berisi `flag_id`, `impact`, dan `rationale` yang spesifik ke flag itu. Inilah yang membuat "wajib direspons" di Prinsip #4 bisa gagal secara mekanis: output yang jumlah flag_response-nya tidak cocok akan ditolak, bukan sekadar dianggap kurang rapi.
+
+**Undetermined (Risk)**
+Status pemeriksaan red flag saat data governance yang dibutuhkan `missing`. Beda tegas dari "tidak ada red flag": yang satu berarti tidak ketemu masalah, yang satu berarti tidak sempat melihat. Modul reasoning berhak tahu yang mana.
+
+---
+
+## Istilah Dashboard
+
+**Dashboard Lokal**
+Lapisan tampilan untuk hasil kedua layer. Berjalan lokal tanpa server, membaca artefak dari disk. Aturan mengikatnya: **menampilkan, tidak menghitung** — dashboard yang menghitung sendiri jadi sumber kebenaran kedua, dan yang diaudit nanti adalah yang tersimpan, bukan yang tampil.
+
+**Context Summary**
+Kesimpulan kondisi market dari 12 komponen Layer 1 (Section 2 halaman Layer 1). **Dihasilkan Layer 1, bukan dashboard** — meringkas 12 pembacaan adalah sintesis, dan sintesis adalah reasoning: ia butuh `method_version`, confidence, dan jejak audit. Dilarang punya skor tunggal. Lihat D-06.
+
+**Masuk Lewat Lensa**
+Cara satu-satunya sampai ke halaman saham: tiga daftar terpisah (satu per modul), masing-masing diurutkan menurut kosakatanya sendiri, plus daftar Divergensi. Tidak pernah digabung. Dasarnya: **Prinsip #3 melarang MENGGABUNG lensa, bukan MENGURUTKAN di dalam satu lensa** — pembedaan yang selama ini tidak pernah dinyatakan. Lihat D-08.
+
+**Kosakata Stance**
+Tiap modul punya kosakata `stance` sendiri yang diturunkan dari pertanyaannya sendiri (`ruang_terbuka` vs `compounding_kuat` vs `asimetri_berkatalis`). Enum bersama yang lama (`compelling/interesting/weak`) adalah skala ordinal yang langsung berubah jadi hitungan suara. Kosakata terpisah membuat suara **tidak bisa dihitung karena operasinya tidak ada**. Pemetaan antar kosakata dilarang dibuat. Lihat D-09.
+
+**Catalyst Set**
+Katalis terjadwal per ticker, dihasilkan Fase A. **Bukan bagian Knowledge** — alasannya umur simpan: isi Knowledge meluruh serempak dari satu `evidence_snapshot_date`, katalis punya kedaluwarsa masing-masing. Lihat D-11.
+
+**Confidence Report vs Confidence Modul**
+`ConfidenceReport` (1 per ticker) mengukur kekuatan **data**. `ModuleOutput.confidence` (3 per ticker) mengukur keyakinan **modul pada kesimpulannya sendiri**. Aturan V6: yang kedua tidak boleh melebihi yang pertama. Sebaliknya boleh — data lengkap tidak mewajibkan kesimpulan kuat.
+
+**Trajectory (D-13)**
+Tesis inti Multibagger: kurva pertumbuhan yang sudah kelihatan sekarang, diteruskan 3–5 tahun, menghasilkan kelipatan dari basis sekarang — dan harga sekarang cuma mem-price tahun depan, bukan lima tahun ke depan. Bukan Gap (pasar belum tahu) dan bukan Momentum murni (satu peristiwa) — pembedanya dari Speculative: Speculative butuh tanggal resolusi, trajectory tidak.
+
+**Akses Field Per Modul (D-12)**
+Tiap modul reasoning cuma boleh membaca subset `KnowledgeProfile`, bukan keseluruhannya. Ini yang menciptakan tiga lensa yang beneran berbeda — tanpa pembatasan ini, ketiga modul cuma bisa berbeda soal bobot terhadap fakta yang sama, bukan soal fakta itu sendiri.
+
+**Bagian 3a / 3b Knowledge (D-13)**
+Posisi kompetitif dipecah: 3a struktur (model bisnis, TAM, konsentrasi revenue — dibaca Multibagger & Quality), 3b momentum (pertumbuhan segmen, tren guidance — cuma dibaca Multibagger). Quality sengaja tidak boleh membaca 3b supaya tidak tergoda menempel ke tesis Multibagger.
+
+**Surprise (D-14)**
+Metrik urutan daftar Divergensi: −log P(kombinasi stance ticker ini | populasi sesi ini). Menggantikan "jumlah label berbeda", yang terbukti tidak membedakan saham membosankan (bisa ditebak penuh dari satu lensa) dari saham yang benar-benar informatif.
+
+**Synthesis (Peta Konvergensi)**
+Bagian yang memetakan di mana ketiga modul reasoning sepakat, di mana berbeda, dan **kenapa** berbeda (`root_cause`). Bukan verdict: verdict memampatkan tiga dimensi jadi satu lalu membuang sisanya; `synthesis` menunjuk balik ke tiga hasil dan tidak menggantikannya — daftar isi, bukan pengganti isi. Confidence-nya = terendah dari tiga modul, bukan rata-rata. Ditampilkan di bawah tiga kolom, tidak di atas. Uji pembedanya: kalau bisa dibaca sendirian dan terasa cukup, ia sudah jadi verdict. Lihat D-07.
+
+**Narasi (Narrative)**
+Penjelasan arti sebuah pembacaan, dalam bahasa manusia. **Artefak pipeline, bukan hasil render** — narasi yang disusun saat halaman dibuka tidak berversi, tidak tersimpan, dan bisa berbeda tiap kali dibuka untuk data yang sama.
 
 ---
 

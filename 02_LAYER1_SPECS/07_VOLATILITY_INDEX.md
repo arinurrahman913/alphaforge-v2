@@ -1,6 +1,8 @@
 # Volatility Index (VIX)
 
-**Status:** Aktif
+**Status:** Aktif — revisi: kind ditambahkan (Prinsip #5)
+**Doc version:** 1.1.0
+**Kind:** direct
 
 ## Definisi
 
@@ -18,9 +20,13 @@ Yahoo Finance (`^VIX`) — gratis, langsung tersedia.
 
 Ambil nilai VIX terkini dan bandingkan dengan rata-rata historisnya untuk menentukan level relatif (rendah/normal/tinggi).
 
-## Dipakai Oleh
+## Input Dari
 
-Market Sentiment (saling melengkapi), Speculative Module (paling sensitif terhadap risk appetite).
+Tidak ada — satu angka langsung dari Yahoo Finance (`^VIX`). Komponen leaf, `kind=direct`.
+
+## Digunakan Oleh
+
+**Market Sentiment** (input komputasi — salah satu dari empat), Speculative Module (paling sensitif terhadap risk appetite).
 
 ---
 

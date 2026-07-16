@@ -1,6 +1,8 @@
 # Currency / Dollar Index (DXY)
 
-**Status:** Aktif
+**Status:** Aktif — revisi: kind ditambahkan (Prinsip #5)
+**Doc version:** 1.1.0
+**Kind:** direct
 
 ## Definisi
 
@@ -18,9 +20,13 @@ Yahoo Finance (`DX-Y.NYB`) — gratis, langsung tersedia.
 
 Pantau tren DXY dan bandingkan dengan rata-rata historisnya.
 
-## Dipakai Oleh
+## Input Dari
 
-Commodity Signals (saling terkait), relevan untuk saham dengan eksposur global/komoditas di ketiga modul.
+Tidak ada — satu angka langsung dari Yahoo Finance (`DX-Y.NYB`). Komponen leaf, `kind=direct`.
+
+## Digunakan Oleh
+
+Ketiga modul, relevan untuk saham dengan eksposur global/komoditas. Commodity Signals bertema dekat tapi bukan konsumen — keduanya dibaca terpisah oleh modul.
 
 ---
 
