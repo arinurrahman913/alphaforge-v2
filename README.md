@@ -19,7 +19,7 @@ v1 (`alphaforge-v1` / `alphaforge-core-v1`) tetap hidup sebagai referensi — ti
 
 ## Status
 
-Struktur & spec konten dasar sudah lengkap (32 dokumen). Implementasi kode belum dimulai — akan menyusul di repo terpisah, mengikuti pola v1 (`alphaforge` untuk dokumentasi, `alphaforge-core` untuk kode).
+Struktur & spec konten dasar sudah lengkap (35 dokumen spec). Implementasi kode belum dimulai — akan menyusul di repo terpisah, mengikuti pola v1 (`alphaforge` untuk dokumentasi, `alphaforge-core` untuk kode).
 
 ## Mulai Baca Dari Mana
 
