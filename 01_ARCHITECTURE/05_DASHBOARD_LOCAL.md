@@ -1,0 +1,195 @@
+# Dashboard Lokal
+
+**Status:** Aktif
+**Doc version:** 1.0.0
+
+---
+
+## 1. Tujuan
+
+Lapisan tampilan lokal untuk hasil Layer 1 dan Layer 2. Ada karena masalah yang dikeluhkan bukan kualitas analisanya, tapi **transparansinya**: hasil keluar, tapi tidak kelihatan angka dan alasan di baliknya.
+
+Dashboard ini menjawab satu pertanyaan berulang: *"angka ini dari mana, dan kenapa kesimpulannya begitu?"*
+
+Konsekuensinya, prinsip utama dashboard bukan keindahan, tapi **ketertelusuran**. Setiap angka yang tampil harus bisa ditelusuri ke sumber, waktu tarik, dan versi metodologinya — tanpa perlu buka kode.
+
+## 2. Prinsip Dashboard
+
+### 2.1 Dashboard Menampilkan, Tidak Menghitung
+
+Dashboard **hanya membaca artefak yang sudah dihasilkan pipeline**. Tidak menghitung ulang apa pun, tidak memanggil provider apa pun, tidak menarik data live.
+
+Ini bukan soal performa. Dashboard yang menghitung sendiri jadi **sumber kebenaran kedua** — dan begitu ada dua sumber kebenaran, angka di layar bisa berbeda dari angka yang tersimpan di Historical Tracking tanpa ada yang sadar. Yang diaudit nanti adalah yang tersimpan, bukan yang tampil. Keduanya wajib identik.
+
+Aturan turunannya: kalau dashboard butuh sesuatu yang tidak ada di artefak, jawabannya adalah **menambah field di pipeline**, bukan menghitungnya di lapisan tampilan.
+
+### 2.2 Narasi Adalah Artefak, Bukan Hasil Render
+
+Ini konsekuensi 2.1 yang paling mudah terlewat.
+
+Kalau narasi ("apa arti pembacaan ini") disusun saat halaman dibuka, maka narasi itu: tidak berversi, tidak tersimpan di Historical Tracking, tidak bisa diaudit, dan bisa berbeda tiap kali dashboard dibuka untuk data yang sama. Itu reasoning yang bersembunyi di lapisan tampilan — persis jenis ketidaktransparanan yang dashboard ini dibuat untuk mengatasi.
+
+**Narasi dihasilkan pipeline, disimpan sebagai field, dan dashboard cuma merendernya.** Tiap narasi membawa `method_version`-nya sendiri.
+
+### 2.3 Yang Kosong Harus Kelihatan Kosong
+
+Field `missing` ditampilkan **eksplisit sebagai missing**, bukan disembunyikan, bukan diisi tanda hubung yang ambigu, bukan barisnya dihilangkan.
+
+Alasannya sama dengan Prinsip #5: profil dengan 40 field lengkap dan profil dengan 25 field lengkap tidak boleh terlihat sama meyakinkan. Kalau baris yang kosong dihapus dari tampilan, dashboard justru **menyembunyikan** informasi paling penting tentang seberapa kuat kesimpulan itu berdiri.
+
+Bedakan juga dua jenis kosong (lihat `03_LAYER2_SPECS/03_KNOWLEDGE.md` bagian 6):
+- **`missing` karena data tidak berhasil ditarik** — masalah
+- **`missing` karena tidak bermakna** (P/E perusahaan rugi) — normal dan informatif
+
+Dua-duanya tampil, dengan penanda berbeda.
+
+### 2.4 Lokal, Tanpa Server
+
+Baca artefak dari disk, render statis. Tidak ada backend, tidak ada database eksternal, tidak ada state yang hidup di dashboard sendiri.
+
+---
+
+## 3. Halaman Layer 1 — Market Context
+
+Sumber: `MarketContextPackage` (`04_DATA_CONTRACTS.md` §3), satu per sesi.
+
+### Section 1 — Bukti Terkini & Analisa
+
+Dua belas komponen, masing-masing satu kartu. Tiap kartu wajib menampilkan:
+
+| Elemen | Isi | Dari field |
+|---|---|---|
+| Nama & nilai | Angka atau kategori | `name`, `value` |
+| **Badge `kind`** | `DIRECT` / `DERIVED` — **wajib, visual, menonjol** | `kind` |
+| Status | ok / degraded / missing | `status` |
+| Narasi | Apa arti pembacaan ini | `narrative` (baru — lihat §5) |
+| Sumber & waktu | Provider + timestamp tarik | `sources[]` |
+| Versi metodologi | Hanya kalau `kind=derived` | `method_version` |
+| Input | Komponen lain yang dipakai | `inputs[]` |
+| Catatan | Kalau degraded/missing | `note` |
+
+**Badge `kind` tidak boleh dikecilkan atau dijadikan tooltip.** Ini implementasi visual langsung dari Prinsip #5. Business Cycle Stage adalah pembacaan yang **kita konstruksi sendiri** dari tiga indikator FRED — ia tidak boleh tampil dengan bobot visual yang sama dengan VIX, yang satu angka resmi dari satu sumber. Kalau dua-duanya tampil sebagai angka rapi berdampingan tanpa pembeda, dashboard sedang berbohong secara tata letak.
+
+**Urutan kartu:** ikuti DAG (`02_LAYER1_MARKET_CONTEXT.md` §5) — 11 komponen leaf dulu, `market_sentiment` terakhir. Urutan ini sekaligus mengajarkan strukturnya: yang terakhir adalah yang bergantung pada yang lain.
+
+### Section 2 — Kesimpulan
+
+Ringkasan kondisi market dari dua belas komponen.
+
+> **⚠ Ini komponen baru yang belum ada spec-nya — lihat D-06.**
+>
+> "Kesimpulan Layer 1" bukan sekadar tampilan. Ia **sintesis** dari dua belas pembacaan, dan sintesis adalah reasoning. Artinya ia butuh: spec sendiri, `method_version`, `kind=derived`, dan confidence-nya sendiri. Kalau ia lahir di lapisan dashboard, ia jadi reasoning ketiga belas yang tidak berversi dan tidak tercatat — melanggar 2.1 dan 2.2 sekaligus.
+>
+> **Keputusan: `context_summary` dihasilkan Layer 1, bukan dashboard.** Dashboard cuma merendernya.
+
+Batasan isi `context_summary` — ia **mendeskripsikan kondisi**, tidak merekomendasikan:
+
+| Boleh | Tidak boleh |
+|---|---|
+| "Yield curve inverted, breadth menyempit, sentimen di zona greed" | "Saatnya defensif" |
+| "3 dari 12 komponen degraded — pembacaan siklus lemah" | "Hindari saham growth" |
+| "Konteks makro dan sentimen bertentangan arah" | "Skor market: 6.5/10" |
+
+Larangan skor tunggal berlaku di sini persis seperti di Aggregator. "Skor market 6.5/10" adalah single-verdict versi makro — dan begitu ada, ia akan jadi satu-satunya hal yang dibaca orang dari dua belas komponen.
+
+Section 2 wajib menampilkan **berapa komponen yang degraded/missing** secara menonjol. Kesimpulan yang berdiri di atas 9 dari 12 komponen tidak boleh terbaca sama kuatnya dengan yang berdiri di atas 12.
+
+---
+
+## 4. Halaman Layer 2 — Analisa Saham
+
+Sumber: `AggregatorOutput` (`04_DATA_CONTRACTS.md` §7) + `KnowledgeProfile` yang dirujuknya.
+
+### Section 1 — Snapshot: Fakta Perusahaan
+
+Seluruh tujuh bagian `KnowledgeProfile`, apa adanya:
+
+| Bagian | Isi |
+|---|---|
+| 1 | Identitas — ticker, nama, sektor, industri, exchange |
+| 2 | Kesehatan finansial — revenue, margin, balance sheet, cash flow |
+| 3 | Posisi kompetitif — model bisnis, konsentrasi revenue, skala absolut |
+| 4 | Tren historis — harga, volatilitas, earnings beat/miss |
+| 5 | Kepemilikan — institusional, insider, transaksi signifikan |
+| 6 | **Valuasi** — P/E, P/S, EV/EBITDA, P/B, FCF yield (absolut) |
+| 7 | **Governance & peristiwa filing** — tren shares outstanding, auditor, restatement, litigasi |
+
+Plus, di header section:
+
+- **Kelengkapan field** — `field_completeness`: "38 dari 47 field terisi". Ditampilkan sebagai angka, bukan bar hijau yang menenangkan.
+- **`evidence_snapshot_date`** — kapan faktanya diambil. Fakta enam minggu lalu dan fakta kemarin tidak boleh tampil sama.
+- **Daftar sumber** — provider + waktu tarik.
+- **`screening_flags`** — soft flag yang lolos dari Screening (ADR, IPO baru, dll).
+
+Section 1 **tidak boleh mengandung kata sifat evaluatif**. "Margin 42%" boleh; "margin sehat" tidak. Itu bukan snapshot lagi, itu penilaian — dan penilaian adalah wewenang section 2. Aturan yang sama persis berlaku di `03_KNOWLEDGE.md`; dashboard tidak boleh menyelundupkannya kembali lewat label.
+
+Angka relatif-peer (`PeerComparisonResult`) ditampilkan **terpisah dari bagian 2 dan 6**, dengan penanda jelas bahwa ini konteks peer, bukan fakta perusahaan — beserta `peer_group_size`, `low_sample_size`, dan `peer_failures` kalau ada. Ini menjaga batas D-03 tetap terlihat di layar, bukan cuma di spec.
+
+### Section 2 — Hasil Reasoning & Kesimpulan
+
+Tiga modul, **berdampingan, urutan tetap**: Multibagger → Quality/Compound → Speculative.
+
+Tiap modul menampilkan seluruh isi `ModuleOutput`-nya:
+
+| Elemen | Kenapa wajib tampil |
+|---|---|
+| `stance` + `stance_rationale` | Kesimpulan modul ini, beserta alasannya |
+| `confidence.score` + `band` + **`limiters`** | Limiters yang bikin skor confidence bermakna. Angka tanpa limiter cuma dekorasi |
+| `flag_responses[]` | **Bukti Prinsip #4 dipatuhi.** Tiap red flag + bagaimana modul ini meresponsnya |
+| `context_used[]` | **Ini jawaban langsung untuk "komponen mana yang benar-benar ngaruh"** — komponen Layer 1 mana yang mempengaruhi stance, dan bagaimana |
+| `knowledge_gaps[]` | Field kosong yang membatasi kesimpulan ini |
+| `method_version` | Formula versi berapa yang menghasilkan ini |
+
+`risk_flags` ditampilkan **di atas ketiga kolom**, bukan di dalamnya — flag berlaku untuk sahamnya, bukan milik satu modul. Flag dengan `status=undetermined` diberi penanda berbeda dari `triggered`: "tidak ketemu masalah" dan "tidak sempat melihat" adalah dua hal berbeda, dan pembeda itu hilang kalau keduanya tampil sebagai kotak abu-abu yang sama.
+
+`context_used` sebaiknya bisa diklik untuk melompat ke kartu komponen di halaman Layer 1. Ini yang menutup lingkaran transparansi: dari kesimpulan → ke komponen yang mempengaruhinya → ke sumber & waktu tariknya. Tiga klik, tanpa buka kode.
+
+Kalau `halted=true`: tampilkan `halt_reason` dan `risk_flags`, ketiga kolom modul kosong. Jangan sembunyikan halamannya — saham yang dihentikan justru perlu terlihat.
+
+### ⚠ "Menampilkan Kesimpulan" — Belum Diputuskan
+
+Deskripsi section 2 menyebut *"hasil analisa dari reasoning **dan menampilkan kesimpulan**"*. Frasa itu punya dua pembacaan yang **berlawanan arah**:
+
+**(a) Kesimpulan masing-masing modul** — tiga `stance` + `stance_rationale` ditampilkan berdampingan. Ini sudah tercakup di tabel atas. Konsisten dengan Prinsip #3.
+
+**(b) Satu kesimpulan gabungan** dari tiga modul. **Ini dilarang** oleh D-04 dan `01_SYSTEM_OVERVIEW.md` §3 — `AggregatorOutput` tidak boleh punya `verdict`, `score`, `rank`, atau `recommendation`. Dan menaruhnya di dashboard tidak mengubah apa pun: satu kesimpulan gabungan yang lahir di lapisan tampilan tetap single-verdict, cuma tanpa spec, tanpa confidence, tanpa tercatat di Historical Tracking. Justru versi yang lebih buruk.
+
+Perlu diputuskan sebelum implementasi. Lihat **D-07**.
+
+Selama belum diputuskan, dashboard mengikuti pembacaan **(a)**.
+
+---
+
+## 5. Yang Perlu Ditambahkan ke Pipeline
+
+Dashboard ini butuh tiga hal yang **belum ada** di kontrak data. Semuanya dihasilkan pipeline, bukan dashboard (prinsip 2.1 & 2.2):
+
+| Field | Di mana | Isi |
+|---|---|---|
+| `ComponentReading.narrative` | Layer 1, per komponen | Narasi arti pembacaan. Membawa `method_version` |
+| `MarketContextPackage.context_summary` | Layer 1, per sesi | Kesimpulan Section 2 halaman Layer 1. `kind=derived`, punya `method_version` + confidence. Lihat D-06 |
+| `ModuleOutput.stance_rationale` | Layer 2, per modul | Sudah ada di kontrak D-04 — pastikan terisi, bukan opsional |
+
+Perubahan ini menaikkan `04_DATA_CONTRACTS.md` ke versi 1.1.0.
+
+---
+
+## 6. Yang Masih Perlu Diputuskan
+
+- **D-06** — spec `context_summary`: kriteria, ambang, apa yang membuatnya "degraded".
+- **D-07** — arti "menampilkan kesimpulan" di section 2 Layer 2.
+- **Siapa yang menulis narasi.** Kalau LLM, ia butuh `method_version` yang mencakup versi model + prompt — kalau tidak, narasi lama tidak bisa direproduksi dan Prinsip #6 bocor lewat pintu ini.
+- **Riwayat sesi.** Dashboard menampilkan sesi terakhir saja, atau bisa telusuri sesi lama dari Historical Tracking? Yang kedua jauh lebih berguna untuk mengevaluasi reasoning, tapi butuh format penyimpanan yang sudah stabil.
+- **Teknologi.** Static HTML dari template, atau app lokal. Belum diputuskan — tapi apa pun pilihannya, prinsip 2.1 mengikat.
+
+---
+
+## 7. Terhubung Dengan
+
+Membaca: `MarketContextPackage` (Layer 1), `AggregatorOutput` + `KnowledgeProfile` + `PeerComparisonResult` (Layer 2), `HistoricalEntry` (opsional).
+
+Tidak menulis apa pun. Tidak dibaca komponen lain — dashboard adalah ujung, bukan tahap.
+
+---
+
+© AlphaForge v2

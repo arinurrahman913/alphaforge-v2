@@ -156,6 +156,65 @@ Rendah, kalau nanti ada anggaran lisensi. Ganti sumber universe; rumus advance/d
 
 ---
 
+## D-06 — Dashboard Lokal ditambahkan; `context_summary` milik Layer 1, bukan dashboard
+
+**Status:** Aktif
+**Menyentuh:** `01_ARCHITECTURE/05_DASHBOARD_LOCAL.md` (baru), `01_ARCHITECTURE/04_DATA_CONTRACTS.md`
+
+### Masalah
+Keluhan yang memicu ini bukan kualitas analisa, tapi transparansi: hasil keluar, tapi angka dan alasan di baliknya tidak kelihatan. Sampai revisi ini v2 tidak punya lapisan tampilan sama sekali — seluruh 37 dokumen berhenti di `AggregatorOutput`.
+
+Menambah komponen bertabrakan dengan Prinsip #8 (kedalaman di atas pelebaran). Tapi kasus ini beda dari "menambah modul reasoning keempat": dashboard tidak menambah kemampuan analisa, ia membuat analisa yang **sudah ada** bisa diperiksa. Prinsip #8 melarang melebar sebelum yang ada matang — dan yang ada tidak bisa dimatangkan kalau hasilnya tidak bisa dilihat.
+
+Turunannya: "Section 2 — Kesimpulan" di halaman Layer 1 terdengar seperti urusan tampilan, padahal bukan. Meringkas dua belas pembacaan jadi satu kesimpulan adalah **sintesis**, dan sintesis adalah reasoning.
+
+### Keputusan
+- Dashboard lokal ditambahkan sebagai lapisan tampilan, dengan aturan mengikat: **menampilkan, tidak menghitung**.
+- **`context_summary` dihasilkan Layer 1**, bukan dashboard. Ia `kind=derived`, punya `method_version` dan confidence sendiri, dan ikut tersimpan ke Historical Tracking.
+- **Narasi per komponen juga artefak pipeline**, bukan hasil render.
+
+### Alasan
+- Dashboard yang menghitung sendiri jadi sumber kebenaran kedua. Yang diaudit nanti adalah yang tersimpan, bukan yang tampil — begitu keduanya bisa berbeda, Prinsip #6 bocor tanpa ada yang sadar.
+- Narasi yang lahir saat render tidak berversi, tidak tersimpan, dan bisa berbeda tiap kali halaman dibuka untuk data yang sama. Itu reasoning yang bersembunyi di lapisan tampilan — persis masalah yang dashboard ini dibuat untuk mengatasi.
+- `context_summary` yang lahir di dashboard = komponen derived ketiga belas tanpa spec, tanpa versi, tanpa jejak audit.
+
+### Alternatif yang ditolak
+- **Dashboard menyusun narasi & kesimpulan sendiri saat render.** Jauh lebih cepat dibangun, dan godaannya nyata — tidak perlu ubah pipeline sama sekali. Ditolak karena memindahkan reasoning ke tempat yang tidak diaudit; ini persis bagaimana v1 kehilangan ketertelusurannya.
+- **Tidak usah ada Section 2 di Layer 1** — cukup dua belas kartu, pembaca menyimpulkan sendiri. Konsisten secara prinsip, tapi menyerahkan beban sintesis dua belas komponen ke pembaca setiap kali; itu yang bikin konteks makro jarang benar-benar dipakai.
+
+### Konsekuensi
+`04_DATA_CONTRACTS.md` naik ke 1.1.0: `ComponentReading.narrative` dan `MarketContextPackage.context_summary` ditambahkan. Spec `context_summary` sendiri (kriteria, ambang, apa yang bikin degraded) **belum ditulis** — tercatat sebagai keputusan terbuka.
+
+### Biaya kalau dibalik
+Rendah untuk dashboard-nya (hapus satu dokumen, ia tidak dibaca komponen lain). Sedang untuk `context_summary` kalau sudah ada entri historis yang menyimpannya.
+
+---
+
+## D-07 — "Menampilkan kesimpulan" di Section 2 Layer 2: BELUM DIPUTUSKAN
+
+**Status:** ⚠ Terbuka — perlu diputuskan sebelum dashboard diimplementasikan
+**Menyentuh:** `01_ARCHITECTURE/05_DASHBOARD_LOCAL.md` §4
+
+### Masalah
+Deskripsi Section 2 berbunyi *"hasil analisa dari reasoning dan menampilkan kesimpulan"*. Frasa itu punya dua pembacaan yang berlawanan arah:
+
+**(a) Kesimpulan masing-masing modul** — tiga `stance` + `stance_rationale` berdampingan. Konsisten dengan Prinsip #3 dan D-04.
+
+**(b) Satu kesimpulan gabungan** dari tiga modul. Dilarang D-04 dan `01_SYSTEM_OVERVIEW.md` §3.
+
+### Kenapa ini bukan sekadar soal kata
+Kalau yang dimaksud (b), menaruhnya di dashboard tidak membuatnya lebih ringan — justru lebih berat. Verdict gabungan yang lahir di lapisan tampilan tetap single-verdict, tapi tanpa spec, tanpa confidence, tanpa `flag_responses`, dan tidak tersimpan ke Historical Tracking. Artinya ia tidak pernah bisa dievaluasi benar atau salahnya.
+
+Itu bukan cuma melanggar Prinsip #3 — itu melanggarnya di tempat yang paling sulit dideteksi nanti. Dan tekanannya nyata: satu kesimpulan selalu lebih enak dibaca daripada tiga yang harus ditimbang sendiri. Persis itu yang bikin v1 gagal, dan persis itu alasan v2 ada.
+
+### Sementara ini
+Dashboard mengikuti pembacaan **(a)**.
+
+### Kalau ternyata (b) yang dimaksud
+Jangan dikerjakan diam-diam di dashboard. Buka entri baru yang membatalkan D-04 secara eksplisit, dan taruh verdict-nya di `AggregatorOutput` supaya setidaknya ia berversi, ber-confidence, dan bisa diaudit. Verdict yang dicatat masih bisa dievaluasi dan dicabut; verdict yang cuma hidup di layar tidak.
+
+---
+
 ## Keputusan Terbuka (Belum Diputuskan)
 
 Dicatat di sini supaya tidak keliru dianggap sudah beres:
@@ -165,6 +224,9 @@ Dicatat di sini supaya tidak keliru dianggap sudah beres:
 - **Ambang kuantitatif red flag** — persentase dilusi, nilai insider selling, jangka waktu.
 - **TTL cache per jenis data** dan ukuran batch aman untuk `yfinance`.
 - **Budget waktu/call satu sesi penuh** — belum pernah dihitung. Lihat `04_DATA_SOURCES/05_RATE_LIMIT_CACHING_STRATEGY.md`.
+- **Spec `context_summary`** — kriteria, ambang, apa yang membuatnya degraded (D-06).
+- **Arti "menampilkan kesimpulan"** di Section 2 Layer 2 (**D-07**) — paling mendesak dari daftar ini.
+- **Siapa penulis narasi** — kalau LLM, `method_version`-nya wajib mencakup versi model + prompt.
 
 ---
 

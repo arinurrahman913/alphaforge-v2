@@ -11,15 +11,17 @@ v1 (`alphaforge-v1` / `alphaforge-core-v1`) tetap hidup sebagai referensi — ti
 
 ```
 00_Foundation/       — Charter, Principles, Glossary, Decision Log
-01_ARCHITECTURE/     — System Overview, spesifikasi Layer 1 & 2, Kontrak Data
+01_ARCHITECTURE/     — System Overview, spesifikasi Layer 1 & 2, Kontrak Data, Dashboard
 02_LAYER1_SPECS/     — 12 spec komponen Market Context Engine
 03_LAYER2_SPECS/     — 12 spec komponen Stock Analysis Engine
 04_DATA_SOURCES/     — Provider data, strategi rate-limit & caching
 ```
 
+**Dashboard lokal** (`01_ARCHITECTURE/05_DASHBOARD_LOCAL.md`) — lapisan tampilan untuk hasil kedua layer. Halaman Layer 1: 12 kartu komponen + kesimpulan konteks. Halaman Layer 2: snapshot fakta perusahaan + tiga hasil reasoning berdampingan. Aturan mengikatnya: **menampilkan, tidak menghitung**.
+
 ## Status
 
-**Spec:** 37 dokumen. Fondasi, arsitektur, dan Layer 1 lengkap. Di Layer 2, wadahnya sudah dikunci (kontrak data, aturan validasi) — **isi kriteria & bobot tiga modul reasoning belum**, dan itu keputusan terbuka terbesar yang tersisa.
+**Spec:** 38 dokumen. Fondasi, arsitektur, dan Layer 1 lengkap. Di Layer 2, wadahnya sudah dikunci (kontrak data, aturan validasi) — **isi kriteria & bobot tiga modul reasoning belum**, dan itu keputusan terbuka terbesar yang tersisa.
 
 **Kode:** ada di repo terpisah `alphaforge-core-v2`, mengikuti pola v1 (`alphaforge` untuk dokumentasi, `alphaforge-core` untuk kode). Implementasi awal Layer 1 (12/12) dan Layer 2 end-to-end sudah jalan dan tervalidasi dengan data live. Beberapa hal diketahui belum lengkap — lihat `PROGRESS_2026-07-14.md`.
 
@@ -31,7 +33,8 @@ v1 (`alphaforge-v1` / `alphaforge-core-v1`) tetap hidup sebagai referensi — ti
 2. `00_Foundation/04_DECISIONS.md` — keputusan arsitektur yang sudah diambil + alternatif yang ditolak
 3. `01_ARCHITECTURE/01_SYSTEM_OVERVIEW.md` — gambaran alur end-to-end
 4. `01_ARCHITECTURE/04_DATA_CONTRACTS.md` — bentuk tiap paket data yang mengalir
-5. Lanjut ke spec detail sesuai layer yang ingin didalami
+5. `01_ARCHITECTURE/05_DASHBOARD_LOCAL.md` — bagaimana semuanya ditampilkan
+6. Lanjut ke spec detail sesuai layer yang ingin didalami
 
 ## Konvensi Dokumen
 

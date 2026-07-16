@@ -1,7 +1,7 @@
 # Kontrak Data (Data Contracts)
 
 **Status:** Aktif
-**Doc version:** 1.0.0
+**Doc version:** 1.1.0
 
 ---
 
@@ -37,6 +37,15 @@ MarketContextPackage {
   session_id            : string
   generated_at          : timestamp
   components            : map<component_name, ComponentReading>
+  context_summary       : ContextSummary            # D-06
+}
+
+ContextSummary {
+  kind                  : "derived"                 # selalu — ini sintesis, bukan pembacaan
+  method_version        : semver
+  narrative             : string
+  confidence            : {score, band, limiters}
+  components_degraded   : [string]                  # komponen yang tidak utuh saat ini disusun
 }
 
 ComponentReading {
@@ -48,8 +57,12 @@ ComponentReading {
   inputs                : [string]                  # nama komponen lain yang dipakai
   sources               : [{provider, fetched_at}]
   note                  : string | null             # alasan kalau degraded/missing
+  narrative             : string | null             # arti pembacaan ini (D-06)
+  narrative_version     : semver | null             # wajib kalau narrative terisi
 }
 ```
+
+`narrative` dihasilkan **pipeline**, bukan dashboard saat render (D-06). Narasi yang lahir saat render tidak berversi, tidak tersimpan, dan bisa berbeda tiap kali halaman dibuka untuk data yang sama — itu reasoning yang bersembunyi di lapisan tampilan.
 
 ### Catatan: kenapa `kind` wajib
 
@@ -231,11 +244,20 @@ HistoricalEntry {
 
 ---
 
+## 8b. Catatan: `context_summary` Bukan Skor Market
+
+`ContextSummary` **dilarang** punya field skor tunggal (`market_score`, `risk_level` numerik, dsb). Ia mendeskripsikan kondisi, tidak merekomendasikan tindakan dan tidak memeringkat.
+
+Larangan ini sejajar dengan larangan `verdict` di Aggregator, dan alasannya sama: begitu ada satu angka ringkasan, ia jadi satu-satunya hal yang dibaca orang dari dua belas komponen — dan sebelas kartu lainnya berubah jadi hiasan.
+
+`components_degraded` wajib terisi supaya dashboard bisa menampilkan kekuatan pijakan kesimpulan ini. Ringkasan yang berdiri di atas 9 dari 12 komponen tidak boleh terbaca sama kuatnya dengan yang berdiri di atas 12.
+
 ## 9. Referensi
 
 - Keputusan di balik kontrak ini → `00_Foundation/04_DECISIONS.md` (D-01 s/d D-05)
 - Skema Knowledge lengkap → `03_LAYER2_SPECS/03_KNOWLEDGE.md`
 - Bentuk Flag → `03_LAYER2_SPECS/04_RISK_REDFLAG_CHECK.md`
+- Bagaimana paket ini ditampilkan → `01_ARCHITECTURE/05_DASHBOARD_LOCAL.md`
 
 ---
 

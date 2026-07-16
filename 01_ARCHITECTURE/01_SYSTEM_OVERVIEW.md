@@ -1,7 +1,7 @@
 # Gambaran Sistem (System Overview)
 
 **Status:** Aktif — revisi: barrier Fase A/B, rujukan kontrak data
-**Doc version:** 2.0.0
+**Doc version:** 2.1.0
 
 ---
 
@@ -73,6 +73,7 @@
 - Detail Layer 2 → `03_LAYER2_STOCK_ANALYSIS.md`
 - Spec tiap komponen → folder `02_LAYER1_SPECS/` dan `03_LAYER2_SPECS/`
 - Bentuk tiap paket data → `04_DATA_CONTRACTS.md`
+- Lapisan tampilan → `05_DASHBOARD_LOCAL.md`
 - Keputusan arsitektur & alternatif yang ditolak → `00_Foundation/04_DECISIONS.md`
 
 ---

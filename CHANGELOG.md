@@ -4,6 +4,34 @@ Format: perubahan dicatat per revisi, mengacu ke entri `D-xx` di `00_Foundation/
 
 ---
 
+## 2026-07-16 — Dashboard Lokal (D-06, D-07)
+
+Rombakan lapisan tampilan. Pemicunya: transparansi — hasil keluar, tapi angka & alasan di baliknya tidak kelihatan.
+
+### Baru
+- **`01_ARCHITECTURE/05_DASHBOARD_LOCAL.md`** — dashboard lokal, 2 halaman × 2 section:
+  - **Layer 1** — §1: 12 kartu komponen (nilai + badge `kind` + narasi + sumber + waktu tarik + `method_version`), urut mengikuti DAG. §2: kesimpulan konteks market.
+  - **Layer 2** — §1: snapshot 7 bagian Knowledge + kelengkapan field + tanggal snapshot + sumber. §2: tiga modul berdampingan (stance, confidence + limiters, `flag_responses`, `context_used`, `knowledge_gaps`).
+- **D-06** — dashboard ditambahkan; `context_summary` & narasi per komponen **dihasilkan Layer 1, bukan dashboard**.
+- **D-07** — ⚠ **terbuka**: arti "menampilkan kesimpulan" di §2 Layer 2.
+
+### Aturan mengikat dashboard
+- **Menampilkan, tidak menghitung.** Baca artefak, jangan hitung ulang, jangan panggil provider. Dashboard yang menghitung sendiri = sumber kebenaran kedua; yang diaudit nanti adalah yang tersimpan, bukan yang tampil.
+- **Narasi adalah artefak, bukan hasil render.** Narasi yang lahir saat halaman dibuka tidak berversi dan bisa beda tiap kali dibuka untuk data yang sama.
+- **Yang kosong harus kelihatan kosong.** Field `missing` tampil eksplisit, dengan pembeda antara "gagal ditarik" vs "tidak bermakna".
+- **Badge `kind` menonjol.** Business Cycle Stage (derived) tidak boleh tampil sebobot VIX (direct).
+- **Section 1 Layer 2 tanpa kata sifat evaluatif.** "Margin 42%" boleh, "margin sehat" tidak.
+
+### Kontrak data → 1.1.0
+- `ComponentReading.narrative` + `narrative_version`
+- `MarketContextPackage.context_summary` → `ContextSummary {kind, method_version, narrative, confidence, components_degraded}`
+- `ContextSummary` **dilarang** punya skor tunggal — sejajar dengan larangan `verdict` di Aggregator
+
+### Catatan Prinsip #8
+Dashboard menambah komponen, dan Prinsip #8 melarang melebar sebelum yang ada matang. Kasus ini diterima karena dashboard tidak menambah kemampuan analisa — ia membuat analisa yang sudah ada bisa diperiksa. Yang ada tidak bisa dimatangkan kalau hasilnya tidak bisa dilihat.
+
+---
+
 ## 2026-07-15 — Revisi Konsistensi Struktural
 
 Revisi ini menutup lima lubang struktural yang ditemukan saat review menyeluruh 37 dokumen. Tidak ada komponen baru yang ditambahkan (Prinsip #8: kedalaman di atas pelebaran) — yang bertambah cuma dua dokumen fondasi (`04_DECISIONS.md`, `04_DATA_CONTRACTS.md`) yang mengunci hal-hal yang sebelumnya menggantung.

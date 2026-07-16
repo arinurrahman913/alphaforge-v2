@@ -1,7 +1,7 @@
 # AlphaForge v2 — Glosarium
 
 **Status:** Aktif — revisi: istilah dari kontrak data & keputusan D-01..D-05 ditambahkan
-**Doc version:** 1.2.0
+**Doc version:** 1.3.0
 
 Istilah-istilah kunci yang dipakai konsisten di seluruh dokumen AlphaForge v2. Disusun per kelompok: konsep fondasi, istilah Layer 1, istilah Layer 2.
 
@@ -121,6 +121,19 @@ Entri wajib di `ModuleOutput` untuk **setiap** flag severity tinggi yang menempe
 
 **Undetermined (Risk)**
 Status pemeriksaan red flag saat data governance yang dibutuhkan `missing`. Beda tegas dari "tidak ada red flag": yang satu berarti tidak ketemu masalah, yang satu berarti tidak sempat melihat. Modul reasoning berhak tahu yang mana.
+
+---
+
+## Istilah Dashboard
+
+**Dashboard Lokal**
+Lapisan tampilan untuk hasil kedua layer. Berjalan lokal tanpa server, membaca artefak dari disk. Aturan mengikatnya: **menampilkan, tidak menghitung** — dashboard yang menghitung sendiri jadi sumber kebenaran kedua, dan yang diaudit nanti adalah yang tersimpan, bukan yang tampil.
+
+**Context Summary**
+Kesimpulan kondisi market dari 12 komponen Layer 1 (Section 2 halaman Layer 1). **Dihasilkan Layer 1, bukan dashboard** — meringkas 12 pembacaan adalah sintesis, dan sintesis adalah reasoning: ia butuh `method_version`, confidence, dan jejak audit. Dilarang punya skor tunggal. Lihat D-06.
+
+**Narasi (Narrative)**
+Penjelasan arti sebuah pembacaan, dalam bahasa manusia. **Artefak pipeline, bukan hasil render** — narasi yang disusun saat halaman dibuka tidak berversi, tidak tersimpan, dan bisa berbeda tiap kali dibuka untuk data yang sama.
 
 ---
 
