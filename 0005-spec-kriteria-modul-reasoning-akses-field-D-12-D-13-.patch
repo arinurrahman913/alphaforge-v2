@@ -1,0 +1,1187 @@
+From f4f627f2588a83b5d17000e460be60a20242690d Mon Sep 17 00:00:00 2001
+From: AlphaForge <a@b>
+Date: Thu, 16 Jul 2026 15:52:49 +0000
+Subject: [PATCH 5/6] spec: kriteria modul reasoning + akses field (D-12, D-13,
+ D-14)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Titik paling menentukan sejak awal: kriteria 3 modul reasoning, sengaja
+dibiarkan kosong sejak review pertama menunggu bukti, sekarang punya
+draft komitmen pertama. Dua penulis (user + Claude), belum final.
+
+- D-12: pembatasan akses field per modul — INI yang menciptakan 3 lensa,
+  bukan optimasi. Tanpa ini, 3 modul cuma beda bobot atas fakta identik.
+- D-13: Multibagger = trajectory (bukan Gap, bukan Momentum murni — beda
+  dari Speculative: perlu tanggal resolusi atau tidak). Quality = kelanjutan,
+  sengaja buta terhadap momentum (3b) & katalis. Speculative = resolusi
+  katalis, sengaja buta terhadap valuasi. Bagian 3 Knowledge dipecah 3a/3b.
+  Diuji ke INTC/PG/MSFT (data Q1-Q3 FY2026 nyata) — MSFT jadi bukti utama:
+  compounding_rapuh dicapai TANPA pernah melihat Azure +40%.
+- D-14: metrik 'jumlah divergensi' (D-08 L5) terbukti salah lewat PG vs MSFT
+  — skor identik, tapi PG bisa ditebak penuh dari 1 lensa (tak informatif),
+  MSFT tidak bisa. Diganti 'surprise' = -log P(kombinasi stance | populasi
+  sesi). T2 (D-04) yang sudah tak terhitung sejak D-09, didefinisikan ulang
+  lewat mutual information — bisa dihitung tiap sesi, bukan tunggu v2.1.
+
+Baru: 05_RESEARCH/ (jejak empiris — draft 20 saham, hasil grup A, kriteria)
+Kontrak data -> 3.0.0. Knowledge -> 3.0.0 (bagian 3 pecah 3a/3b).
+---
+ 00_Foundation/03_GLOSSARY.md                  |  14 +-
+ 00_Foundation/04_DECISIONS.md                 | 171 ++++++++++++-
+ 01_ARCHITECTURE/04_DATA_CONTRACTS.md          |  19 +-
+ 01_ARCHITECTURE/05_DASHBOARD_LOCAL.md         |   7 +-
+ 03_LAYER2_SPECS/03_KNOWLEDGE.md               |  29 ++-
+ 03_LAYER2_SPECS/07_MODULE_MULTIBAGGER.md      |  24 +-
+ 03_LAYER2_SPECS/08_MODULE_QUALITY_COMPOUND.md |  22 +-
+ 03_LAYER2_SPECS/09_MODULE_SPECULATIVE.md      |  22 +-
+ 03_LAYER2_SPECS/11_AGGREGATOR_OUTPUT.md       |   5 +-
+ 05_RESEARCH/README.md                         |  11 +
+ 05_RESEARCH/kriteria-modul-draft-v1.md        | 105 ++++++++
+ 05_RESEARCH/tes-20-saham-draft.md             | 237 ++++++++++++++++++
+ 05_RESEARCH/tes-20-saham-hasil-grupA.md       | 176 +++++++++++++
+ CHANGELOG.md                                  |  27 ++
+ README.md                                     |   5 +-
+ 15 files changed, 853 insertions(+), 21 deletions(-)
+ create mode 100644 05_RESEARCH/README.md
+ create mode 100644 05_RESEARCH/kriteria-modul-draft-v1.md
+ create mode 100644 05_RESEARCH/tes-20-saham-draft.md
+ create mode 100644 05_RESEARCH/tes-20-saham-hasil-grupA.md
+
+diff --git a/00_Foundation/03_GLOSSARY.md b/00_Foundation/03_GLOSSARY.md
+index 1005b58..f5c46e5 100644
+--- a/00_Foundation/03_GLOSSARY.md
++++ b/00_Foundation/03_GLOSSARY.md
+@@ -1,7 +1,7 @@
+ # AlphaForge v2 — Glosarium
+ 
+ **Status:** Aktif — revisi: istilah dari kontrak data & keputusan D-01..D-05 ditambahkan
+-**Doc version:** 1.5.0
++**Doc version:** 2.0.0
+ 
+ Istilah-istilah kunci yang dipakai konsisten di seluruh dokumen AlphaForge v2. Disusun per kelompok: konsep fondasi, istilah Layer 1, istilah Layer 2.
+ 
+@@ -144,6 +144,18 @@ Katalis terjadwal per ticker, dihasilkan Fase A. **Bukan bagian Knowledge** —
+ **Confidence Report vs Confidence Modul**
+ `ConfidenceReport` (1 per ticker) mengukur kekuatan **data**. `ModuleOutput.confidence` (3 per ticker) mengukur keyakinan **modul pada kesimpulannya sendiri**. Aturan V6: yang kedua tidak boleh melebihi yang pertama. Sebaliknya boleh — data lengkap tidak mewajibkan kesimpulan kuat.
+ 
++**Trajectory (D-13)**
++Tesis inti Multibagger: kurva pertumbuhan yang sudah kelihatan sekarang, diteruskan 3–5 tahun, menghasilkan kelipatan dari basis sekarang — dan harga sekarang cuma mem-price tahun depan, bukan lima tahun ke depan. Bukan Gap (pasar belum tahu) dan bukan Momentum murni (satu peristiwa) — pembedanya dari Speculative: Speculative butuh tanggal resolusi, trajectory tidak.
++
++**Akses Field Per Modul (D-12)**
++Tiap modul reasoning cuma boleh membaca subset `KnowledgeProfile`, bukan keseluruhannya. Ini yang menciptakan tiga lensa yang beneran berbeda — tanpa pembatasan ini, ketiga modul cuma bisa berbeda soal bobot terhadap fakta yang sama, bukan soal fakta itu sendiri.
++
++**Bagian 3a / 3b Knowledge (D-13)**
++Posisi kompetitif dipecah: 3a struktur (model bisnis, TAM, konsentrasi revenue — dibaca Multibagger & Quality), 3b momentum (pertumbuhan segmen, tren guidance — cuma dibaca Multibagger). Quality sengaja tidak boleh membaca 3b supaya tidak tergoda menempel ke tesis Multibagger.
++
++**Surprise (D-14)**
++Metrik urutan daftar Divergensi: −log P(kombinasi stance ticker ini | populasi sesi ini). Menggantikan "jumlah label berbeda", yang terbukti tidak membedakan saham membosankan (bisa ditebak penuh dari satu lensa) dari saham yang benar-benar informatif.
++
+ **Synthesis (Peta Konvergensi)**
+ Bagian yang memetakan di mana ketiga modul reasoning sepakat, di mana berbeda, dan **kenapa** berbeda (`root_cause`). Bukan verdict: verdict memampatkan tiga dimensi jadi satu lalu membuang sisanya; `synthesis` menunjuk balik ke tiga hasil dan tidak menggantikannya — daftar isi, bukan pengganti isi. Confidence-nya = terendah dari tiga modul, bukan rata-rata. Ditampilkan di bawah tiga kolom, tidak di atas. Uji pembedanya: kalau bisa dibaca sendirian dan terasa cukup, ia sudah jadi verdict. Lihat D-07.
+ 
+diff --git a/00_Foundation/04_DECISIONS.md b/00_Foundation/04_DECISIONS.md
+index 6284416..0507381 100644
+--- a/00_Foundation/04_DECISIONS.md
++++ b/00_Foundation/04_DECISIONS.md
+@@ -301,7 +301,7 @@ Maka: **tidak ada satu daftar. Ada tiga daftar, dan satu daftar keempat.**
+               dua yang tadi tidak kamu pakai
+ ```
+ 
+-**Daftar keempat — Divergensi.** Diurutkan menurut seberapa jauh ketiga lensa berselisih (dari `synthesis.divergences[]`). Ini bukan peringkat kualitas — ini peringkat **seberapa banyak yang bisa dipelajari**. Saham yang ketiganya sepakat tidak mengajarkan apa pun yang tidak bisa didapat dari satu lensa saja; saham yang ketiganya berselisih adalah satu-satunya tempat multi-lens benar-benar membayar dirinya sendiri.
++**Daftar keempat — Divergensi.** Diurutkan menurut `synthesis.surprise` (D-14) — bukan jumlah label berbeda. Pembuktian D-13/D-14 pada PG vs MSFT menunjukkan kenapa: keduanya menghasilkan 3 label berbeda, tapi PG bisa ditebak penuh dari satu lensa (tidak informatif) sementara MSFT tidak bisa (sangat informatif). Jumlah divergensi tidak membedakan ini; `surprise` membedakannya. Ini peringkat **seberapa banyak yang bisa dipelajari**, bukan peringkat kualitas.
+ 
+ ### Aturan
+ | # | Aturan |
+@@ -310,7 +310,7 @@ Maka: **tidak ada satu daftar. Ada tiga daftar, dan satu daftar keempat.**
+ | L2 | **Tidak ada kolom lensa lain di daftar lensa.** Daftar Multibagger tidak boleh menampilkan stance Quality — itu penggabungan lewat pintu samping |
+ | L3 | **Pengurutan di dalam daftar memakai kosakata lensa itu sendiri** (D-09), jadi lintas daftar tidak ada operasi banding |
+ | L4 | **Halaman saham selalu menampilkan ketiganya**, tak peduli lewat daftar mana masuknya |
+-| L5 | Daftar Divergensi mengurut menurut jumlah & kedalaman divergensi, **tidak pernah** menurut stance |
++| L5 | Daftar Divergensi mengurut menurut **`surprise`** (D-14) — **tidak pernah** menurut jumlah label berbeda atau menurut stance |
+ 
+ ### Kenapa ini justru memperkuat Prinsip #3
+ Awalnya terdengar seperti kompromi — "ya sudah, kasih peringkat saja, asal per lensa". Bukan.
+@@ -439,13 +439,178 @@ Rendah untuk `ConfidenceReport`. Sedang untuk `CatalystSet` kalau sudah ada entr
+ 
+ ---
+ 
++## D-12 — Pembatasan akses field per modul: yang menciptakan tiga lensa
++
++**Status:** Aktif
++**Menyentuh:** `01_ARCHITECTURE/04_DATA_CONTRACTS.md`, `03_LAYER2_SPECS/03`, `07`, `08`, `09`
++
++### Masalah
++D-09 memisahkan kosakata `stance` per modul. Tapi itu cuma menyembunyikan masalah yang lebih dalam: kalau ketiga modul membaca `KnowledgeProfile` yang **sama persis**, mereka cuma bisa berbeda soal **bobot** — bukan soal fakta. Kosakata beda, tapi bahan bakunya identik.
++
++Tes lapangan (bukan tes 20 saham lengkap — cuma INTC, dijalankan manual) membuktikan ini bukan kekhawatiran teoretis. Kalau ketiga lensa boleh melihat GAAP EPS $(0.73) dan foundry loss $2.4B, ketiganya akan tertarik ke jawaban yang sama — angka sekeras itu menyeret semua lensa, berapa pun bobot yang dipasang.
++
++### Keputusan
++Tiap modul cuma boleh membaca **subset** `KnowledgeProfile`. Field di luar subsetnya tidak masuk `context_used`, tidak boleh mempengaruhi `stance`, dan pelanggarannya adalah bug — bukan pilihan implementasi.
++
++| Bagian Knowledge | Multibagger | Quality/Compound | Speculative |
++|---|:---:|:---:|:---:|
++| 1 — Identitas | ✅ | ✅ | ✅ |
++| 2 — Kesehatan finansial | **arah saja** | ✅ penuh | ❌ |
++| 3a — Struktur (D-13) | ✅ | ✅ | ❌ |
++| 3b — Momentum (D-13) | ✅ | ❌ | ❌ |
++| 4 — Tren historis | ✅ | ✅ penuh | volatilitas saja |
++| 5 — Kepemilikan | ❌ | ✅ | ✅ |
++| 6 — Valuasi | ✅ | ✅ | ❌ |
++| 7 — Governance | ❌ | ✅ | ❌ |
++| `CatalystSet` | ✅ sekunder | ❌ | ✅ penuh |
++| Peer | ✅ | ✅ | ❌ |
++
++### Alasan
++Ini bukan optimasi — **ini yang menciptakan lensanya.** Tanpa pembatasan, sistem tidak punya tiga lensa; ia punya satu lensa dengan tiga suara yang dipaksa mengucapkan kata berbeda lewat D-09. Setiap ❌ di tabel adalah klaim yang bisa salah dan wajib bisa dibela satu per satu — bukan default yang diam-diam disepakati. Pembelaan tiap baris ada di `03_LAYER2_SPECS/03_KNOWLEDGE.md` §akses dan di kriteria masing-masing modul (D-13).
++
++Yang paling penting: **Speculative tidak boleh melihat valuasi (6).** Ini bukan gaya bicara — ini batas lensa. Asimetri berkatalis tidak butuh harga masuk yang wajar untuk jadi asimetri.
++
++### Konsekuensi teruji
++Kasus MSFT (D-13, §pembuktian): dengan pembatasan ini, Quality tidak pernah melihat Azure +40% (itu 3b) dan tetap sampai ke `compounding_rapuh` murni dari margin & capex. Tanpa pembatasan, Azure +40% kemungkinan akan menyeret Quality ke `compounding_kuat` — dan `synthesis` yang dihasilkan tidak akan pernah bisa membedakan "Quality salah baca" dari "Quality memang tidak boleh tahu".
++
++### Biaya kalau dibalik
++Tinggi setelah kriteria (D-13) ditulis di atasnya — keduanya saling bergantung.
++
++---
++
++## D-13 — Kriteria tiga modul: trajectory, bukan gap dan bukan momentum murni
++
++**Status:** Aktif — draft komitmen pertama, belum diuji di luar 3 saham
++**Menyentuh:** `03_LAYER2_SPECS/03`, `07`, `08`, `09`, `01_ARCHITECTURE/04_DATA_CONTRACTS.md`
++
++### Masalah
++Setelah D-01 sampai D-12, seluruh wadah sudah terkunci — kontrak, validasi, dashboard, akses field — tapi **isi kriteria tiga modul kosong**. Ini lubang yang paling menentukan v2 jadi apa, dan sengaja tidak diisi sampai ada bukti empiris untuk berdiri di atasnya, bukan tebakan dari kursi.
++
++### Metode
++Bukan diturunkan dari teori. Diekstrak dari perbandingan berpasangan: dipaksa memilih satu saham lewat satu lensa, sekali waktu, dan menulis alasannya dalam satu kalimat. Alasan-alasan itu diuji balik ke tiga kasus nyata (INTC, PG, MSFT — data Q1/Q3 FY2026) untuk melihat apakah kriterianya menghasilkan kesimpulan yang koheren atau berkontradiksi.
++
++### Temuan yang menentukan bentuknya
++Jawaban awal untuk Multibagger condong ke "ikuti arus yang lagi kuat" (Momentum) — tapi itu nyaris sama dengan pertanyaan Speculative, dan akan membuat dua modul redundan. Diselesaikan lewat **opsi ketiga**:
++
++> **Multibagger = trajectory.** Bukan taruhan bahwa pasar belum tahu (Gap — nyaris mustahil dijadikan kriteria berbasis data tanpa jadi "saya lebih pintar dari pasar"). Bukan taruhan pada satu peristiwa (Momentum murni — itu Speculative). Melainkan: **kurva pertumbuhan yang sudah kelihatan sekarang, diteruskan 3–5 tahun, menghasilkan kelipatan dari basis sekarang — dan harga sekarang cuma mem-price tahun depan, bukan lima tahun ke depan.**
++
++Pembeda bersih dari Speculative: **Speculative butuh tanggal resolusi. Multibagger tidak** — trajectory jalan terus dengan atau tanpa satu peristiwa tertentu.
++
++Ini juga yang membelah bagian 3 Knowledge (lihat di bawah), dan yang membuat kasus INTC versi sebelumnya (external foundry $174M) ternyata **lebih lemah** dari kasus PLTR/TSM yang justru muncul dari intuisi pemilik produk — $174M dari basis nyaris nol belum trajectory yang kelihatan, baru opsi yang belum mulai.
++
++### Keputusan: Bagian 3 Knowledge Dipecah
++
++| | Isi | Multibagger | Quality |
++|---|---|:---:|:---:|
++| **3a — Struktur** | model bisnis, konsentrasi revenue, ukuran TAM, posisi kompetitif | ✅ | ✅ |
++| **3b — Momentum** | pertumbuhan segmen, tren guidance vs konsensus, akselerasi/deselerasi | ✅ | ❌ |
++
++Trajectory butuh dua bahan berbeda sifat: struktur (seberapa besar ruangnya) dan momentum (apakah sedang bergerak ke arah situ). Quality cuma butuh yang pertama — mesin yang awet tidak perlu sedang berakselerasi untuk dianggap awet. Kalau Quality boleh membaca momentum, ia akan pelan-pelan tergoda mengandalkannya dan menempel ke Multibagger — persis yang coba dihindari D-12.
++
++### Kriteria — Draft Komitmen v1
++
++**Quality/Compound** (baca 1,2,3a,4,5,6,7,peer — tidak baca 3b, `CatalystSet`):
++
++| Stance | Syarat |
++|---|---|
++| `compounding_kuat` | Margin stabil/naik N periode · FCF positif berturut · konsentrasi revenue di bawah ambang · percentile margin peer di atas median · tanpa flag governance severity tinggi yang belum direspons |
++| `compounding_rapuh` | Margin/FCF mulai turun, tapi 3a (model bisnis, posisi kompetitif) masih utuh |
++| `bukan_compounder` | Kerugian struktural di bisnis inti, atau restatement, atau margin & FCF negatif bersamaan |
++| `mesin_tak_terbaca` | Field kunci di 2/3a/7 `missing` melewati ambang |
++
++**Multibagger** (baca 1,2-arah,3a,3b,4,6,peer,`CatalystSet`-sekunder — tidak baca 5,7):
++
++| Stance | Syarat |
++|---|---|
++| `ruang_terbuka` | Pertumbuhan segmen (3b) berakselerasi/infleksi positif · valuasi sekarang cuma masuk akal dengan asumsi pertumbuhan segera melambat · TAM (3a) masih ada headroom (peer group nunjukin penetrasi/pangsa masih rendah) |
++| `ruang_sempit` | Pertumbuhan kuat, tapi valuasi (peer percentile) sudah tinggi — kelanjutannya sudah mulai di-price |
++| `ruang_tertutup` | Pertumbuhan datar/melambat dan TAM matang |
++| `ruang_tak_terbaca` | 3b `missing`, atau peer group `low_sample_size` |
++
++**Speculative** (baca 1, volatilitas-4, 5, `CatalystSet` penuh, makro — tidak baca 2,3,6):
++
++| Stance | Syarat |
++|---|---|
++| `asimetri_berkatalis` | ≥1 katalis `scheduled`/`expected` dalam horizon · hasil genuinely tidak pasti (gap guidance-vs-konsensus, atau outcome biner) · volatilitas cukup |
++| `asimetri_tanpa_katalis` | Tidak ada katalis dalam horizon, volatilitas tetap tinggi |
++| `tanpa_asimetri` | Tidak ada katalis, volatilitas rendah |
++| `asimetri_tak_terbaca` | `CatalystSet.status` degraded/missing |
++
++### Pembuktian: Tiga Kasus Nyata (data Q1/Q3 FY2026)
++
++| | Multibagger | Quality | Speculative | `root_cause` |
++|---|---|---|---|---|
++| **INTC** | `ruang_tak_terbaca`\* | `bukan_compounder` (GAAP −0.73, foundry loss $2.4B/kuartal, restructuring $4.1B) | `asimetri_berkatalis` (18A ramp, guidance $1.3B di atas konsensus) | `different_fields` |
++| **PG** | `ruang_tertutup` (organic +3%, kategori mapan) | `compounding_kuat` (FCF productivity 82%, dividen 70 tahun) | `tanpa_asimetri` | `different_fields`, tapi ketiganya searah negatif-untuk-multibagger |
++| **MSFT** | `ruang_sempit` (Azure +40%, tapi sudah di-price) | `compounding_rapuh` (GM 67.6% tersempit sejak 2022, capex naik 61% dengan $25M cuma inflasi komponen) | `asimetri_berkatalis` (restrukturisasi OpenAI, capex $3.4B di bawah konsensus) | `different_fields` |
++
++\*Revisi dari klaim sebelumnya (`ruang_terbuka`) — di bawah kriteria trajectory, external foundry $174M dari basis nyaris nol bukan kurva yang sudah kelihatan.
++
++**Temuan penting dari pembuktian ini, bukan cuma dari kriterianya:** PG dan MSFT sama-sama menghasilkan 3 label berbeda — skor "jumlah divergensi" identik. Tapi PG bisa ditebak sepenuhnya dari satu lensa (sepakat implisit); MSFT tidak bisa. **Jumlah label berbeda bukan ukuran informasi — yang ukuran informasi adalah seberapa tidak terduga kombinasinya dibanding populasi.** Ini melahirkan D-14.
++
++### Yang Belum Diuji
++- Ambang numerik (berapa persen margin turun → `compounding_rapuh`) — butuh lebih banyak saham, bukan keputusan dari kursi.
++- Apakah pecahan 3a/3b ini benar, atau cuma salah satu cara membelah. Cara mengecek: prediksi treatment KO vs COST pakai kriteria ini, bandingkan dengan intuisi pemilik produk.
++- Seluruh kriteria ini **draft komitmen pertama** — akan direvisi begitu dijalankan ke populasi penuh dan `surprise` (D-14) menunjukkan pola yang tidak konsisten dengan kriteria di atas.
++
++### Kepemilikan
++Kriteria ini punya dua penulis. Berbeda dari D-01 sampai D-11 yang murni keputusan arsitektur, isi tesis di dokumen ini adalah kolaborasi — dan karena itu **wajib** direvisi begitu pemilik produk merasa ada bagian yang "bukan ini yang dimaksud", bukan dipertahankan karena sudah tertulis rapi.
++
++### Biaya kalau dibalik
++Tinggi untuk struktur (bagian 3a/3b, akses field D-12) begitu kode dibangun di atasnya. Rendah untuk ambang numerik di dalam tiap kriteria — itu memang dirancang untuk diubah sering.
++
++---
++
++## D-14 — Daftar Divergensi diurutkan menurut *surprise*, bukan jumlah divergensi; T2 didefinisikan ulang
++
++**Status:** Aktif
++**Menyentuh:** `01_ARCHITECTURE/04_DATA_CONTRACTS.md` §6/§7, `01_ARCHITECTURE/05_DASHBOARD_LOCAL.md` §3b, D-04, D-08
++
++### Masalah
++D-08 aturan **L5** mengurutkan daftar Divergensi menurut "jumlah & kedalaman divergensi". Pembuktian D-13 pada PG dan MSFT membongkar ini: keduanya menghasilkan 3 label berbeda — skor identik menurut L5 — tapi PG **bisa ditebak penuh** dari satu lensa (consumer staples mapan → tiga lensa yang saling menentukan), sementara MSFT **tidak bisa**. Menurut L5, keduanya akan duduk sejajar di puncak daftar Divergensi. Itu salah: daftar itu akan dipenuhi saham paling membosankan di market, karena saham membosankan justru paling rapi menyapu ketiga sumbu dengan cara yang saling tertebak.
++
++Masalah kedua, lebih diam-diam: D-04 tes **T2** ("kalau >90% ticker punya stance sama di ketiga modul, curigai Multi-Lens") berhenti bisa dihitung sejak D-09 memisahkan kosakata `stance` per modul. "Stance sama" tidak lagi punya arti ketika ketiga kosakata berbeda sumbu. Ini tidak disadari sampai sekarang.
++
++### Keputusan
++**Metrik yang benar: seberapa tidak terduga kombinasi stance ini, dibanding populasi sesi ini.**
++
++```
++P(stance_quality, stance_speculative | stance_multibagger)   ← dihitung dari seluruh populasi sesi (~1.500–3.000 ticker)
++
++surprise(ticker) = −log P(kombinasi stance ticker ini | populasi sesi ini)
++```
++
++Daftar Divergensi (D-08) diurutkan menurut `surprise`, bukan jumlah label berbeda.
++
++**T2 didefinisikan ulang:** bukan "berapa persen ticker punya stance sama", tapi **mutual information antar stance tiga lensa di seluruh populasi**. Kalau mendekati nol entropi bersyarat — lensa B bisa ditebak dari lensa A — lensa B redundan, Multi-Lens tinggal klaim di atas kertas.
++
++### Alasan
++Efek samping yang berharga: metrik ini **menemukan sendiri** kombinasi mana yang lumrah tanpa perlu ditetapkan manual, dan otomatis menyesuaikan tiap sesi — kalau seluruh market bergerak, standar "mengejutkan" ikut bergeser bersamanya.
++
++T2 versi mutual information bisa dihitung otomatis, sekali per sesi, dari satu angka. **Ini artinya tesis inti v2 — apakah tiga lensa benar-benar independen — tidak perlu menunggu Historical Tracking v2.1 dan evaluasi bertahun-tahun.** Ia bisa dites tiap kali sesi selesai, dari populasinya sendiri.
++
++### Konsekuensi
++- `Synthesis` (D-07) mendapat field baru: `surprise` (angka) dan `population_baseline` (distribusi kombinasi stance saat itu dihitung).
++- Perhitungan `surprise` **butuh populasi utuh** — memperberat barrier Fase B (D-03) satu langkah lagi: `synthesis` per ticker tidak bisa selesai sampai seluruh Knowledge→Peer→ModuleOutput populasi selesai lebih dulu.
++- Daftar Divergensi (dashboard) tidak bisa dirender sebagian — ia menunggu sesi penuh, berbeda dari tiga daftar per-lensa yang bisa dirender begitu ticker itu sendiri selesai.
++
++### Alternatif yang ditolak
++- **Tetap jumlah divergensi, tambah pembobotan manual per kombinasi** — mengharuskan menetapkan "kombinasi mana yang lumrah" secara manual, dan tidak menyesuaikan otomatis kalau market bergeser.
++- **Historical baseline lintas sesi** — lebih stabil secara statistik, tapi menunda metrik ini sampai ada riwayat sesi, padahal masalahnya perlu jawaban sekarang. Bisa jadi peningkatan v2.1 begitu Historical Tracking punya cukup data.
++
++### Biaya kalau dibalik
++Sedang. `surprise` field bisa dihapus dari kontrak tanpa merusak `agreements[]`/`divergences[]`; daftar Divergensi kembali ke L5 lama.
++
++---
++
+ 
+ ## Keputusan Terbuka (Belum Diputuskan)
+ 
+ Dicatat di sini supaya tidak keliru dianggap sudah beres:
+ 
+ - **Format output Confidence** — numerik 0–100, kategori diskrit, atau keduanya (`03_LAYER2_SPECS/05_CONFIDENCE_DATA_QUALITY.md`).
+-- **Bobot & kriteria tiga modul reasoning** — bentuk output-nya sudah dikunci (D-04), isi reasoning-nya belum.
++- **Ambang numerik di dalam kriteria D-13** — persen margin turun, lama pertumbuhan flat, dsb. Kerangkanya sudah ada, angkanya belum diuji ke populasi luas.
++- **Apakah pecahan 3a/3b (D-13) sudah benar** — baru diuji ke 3 saham, bukan populasi.
+ - **Ambang kuantitatif red flag** — persentase dilusi, nilai insider selling, jangka waktu.
+ - **TTL cache per jenis data** dan ukuran batch aman untuk `yfinance`.
+ - **Budget waktu/call satu sesi penuh** — belum pernah dihitung. Lihat `04_DATA_SOURCES/05_RATE_LIMIT_CACHING_STRATEGY.md`.
+diff --git a/01_ARCHITECTURE/04_DATA_CONTRACTS.md b/01_ARCHITECTURE/04_DATA_CONTRACTS.md
+index f00cb91..af4c273 100644
+--- a/01_ARCHITECTURE/04_DATA_CONTRACTS.md
++++ b/01_ARCHITECTURE/04_DATA_CONTRACTS.md
+@@ -1,7 +1,7 @@
+ # Kontrak Data (Data Contracts)
+ 
+ **Status:** Aktif
+-**Doc version:** 2.0.0
++**Doc version:** 3.0.0
+ 
+ ---
+ 
+@@ -89,7 +89,7 @@ KnowledgeProfile {
+   sections              : {
+     identity            : {...}   # bagian 1
+     financial_health    : {...}   # bagian 2
+-    competitive_position: {...}   # bagian 3
++    competitive_position: {structure: {...}, momentum: {...}}  # 3a & 3b (D-13)
+     historical_trends   : {...}   # bagian 4
+     ownership           : {...}   # bagian 5
+     valuation           : {...}   # bagian 6 — lihat D-02
+@@ -266,7 +266,7 @@ Prinsip #3 sudah mendefinisikan "independen" secara teknis, tapi belum pernah me
+ - **Narasi tidak diuji terpisah** — ia render deterministik dari field terstruktur (D-10), jadi kalau field-nya identik, narasinya identik dengan sendirinya.
+ 
+ > Kalau modul reasoning sendiri berbasis LLM, T1a tidak akan lulus. Itu keputusan yang harus diambil sadar, bukan ditemukan saat tes merah — lihat D-10 dan Keputusan Terbuka.
+-- **T2 — Konvergensi mencurigakan.** Di satu batch analisa, kalau ketiga modul menghasilkan `stance` yang sama untuk >90% ticker, Multi-Lens-nya patut dicurigai jadi klaim di atas kertas. Ini bukan kegagalan otomatis — bisa saja market-nya memang seragam — tapi wajib memicu review, bukan lewat diam-diam.
++- **T2 — Redundansi lensa (redefinisi D-14).** *Definisi lama* ("stance sama untuk >90% ticker") berhenti bisa dihitung sejak D-09 memisahkan kosakata `stance` per modul — "sama" tidak lagi punya arti antar sumbu berbeda. *Definisi baru:* hitung **mutual information** antar stance tiga lensa di seluruh populasi sesi. Kalau mendekati nol entropi bersyarat — stance lensa B bisa ditebak dari stance lensa A — lensa B redundan, Multi-Lens tinggal klaim di atas kertas. Bisa dihitung otomatis tiap sesi dari satu angka, tidak perlu menunggu Historical Tracking v2.1.
+ 
+ ---
+ 
+@@ -309,9 +309,22 @@ Synthesis {
+   narrative             : string                    # rangkuman naratif, tunduk S2 & S3
+   confidence            : {score, band, limiters}   # = TERENDAH dari 3 modul (S4)
+   full_convergence      : bool                      # true kalau 3 stance sama → picu T2 (S5)
++  surprise              : number                    # D-14 — -log P(kombinasi stance | populasi sesi)
++  population_baseline   : {session_id, sample_size}  # D-14 — rujukan populasi yang dipakai hitung surprise
+ }
+ ```
+ 
++### `surprise` — Metrik Daftar Divergensi (D-14)
++
++Menggantikan "jumlah divergensi" (D-08 L5 versi awal) sebagai dasar urutan daftar Divergensi. Alasannya: jumlah label berbeda **bukan** ukuran informasi. Dua saham bisa punya jumlah divergensi identik — satu bisa ditebak penuh dari satu lensa (tidak informatif), satu tidak bisa ditebak sama sekali (sangat informatif). Cuma `surprise` yang membedakan keduanya.
++
++```
++P(stance_quality, stance_speculative | stance_multibagger)  ← dihitung dari seluruh populasi sesi
++surprise(ticker) = −log P(kombinasi stance ticker ini | populasi sesi ini)
++```
++
++**Konsekuensi barrier:** `surprise` butuh populasi utuh — tidak bisa dihitung sampai `ModuleOutput` seluruh kandidat sesi selesai. Ini memperberat barrier Fase B satu langkah: `synthesis` per ticker menunggu populasi, berbeda dari `ModuleOutput` yang selesai per-ticker begitu Fase B tickernya sendiri kelar.
++
+ `root_cause` adalah inti gunanya. "Multibagger dan Quality/Compound berbeda" itu belum informasi — yang informasi adalah **kenapa**: apakah mereka membaca field yang berbeda, membobot field yang sama secara berbeda, salah satu terhalang `knowledge_gap`, atau berbeda dalam merespons flag yang sama.
+ 
+ `citations[]` wajib menunjuk ke field spesifik (`knowledge.valuation.pe_trailing`, `module.multibagger.knowledge_gaps[0]`). **Klaim yang tidak bisa disitasi tidak boleh ditulis** (S2). Ini yang mencegah `synthesis` menyelundupkan penilaian yang tidak dimiliki modul manapun.
+diff --git a/01_ARCHITECTURE/05_DASHBOARD_LOCAL.md b/01_ARCHITECTURE/05_DASHBOARD_LOCAL.md
+index ea27f58..8dc5823 100644
+--- a/01_ARCHITECTURE/05_DASHBOARD_LOCAL.md
++++ b/01_ARCHITECTURE/05_DASHBOARD_LOCAL.md
+@@ -1,7 +1,7 @@
+ # Dashboard Lokal
+ 
+ **Status:** Aktif
+-**Doc version:** 2.0.0
++**Doc version:** 3.0.0
+ 
+ ---
+ 
+@@ -127,7 +127,7 @@ Bandingkan dengan satu daftar berperingkat: kamu datang tanpa pertanyaan, sistem
+ | L4 | Halaman saham **selalu** menampilkan ketiganya, lewat daftar mana pun masuknya |
+ | L5 | Daftar Divergensi mengurut menurut jumlah & kedalaman divergensi, **tidak pernah** menurut stance |
+ 
+-**Daftar Divergensi** diurutkan dari `synthesis.divergences[]`. Ini bukan peringkat kualitas — ini peringkat **seberapa banyak yang bisa dipelajari**. Saham yang ketiganya sepakat tidak mengajarkan apa pun yang tidak bisa didapat dari satu lensa; saham yang ketiganya berselisih adalah satu-satunya tempat multi-lens membayar dirinya sendiri.
++**Daftar Divergensi** diurutkan dari `synthesis.surprise` (D-14) — bukan jumlah label berbeda. Terbukti perlu: PG dan MSFT sama-sama punya 3 label berbeda, tapi PG bisa ditebak penuh dari satu lensa (tidak informatif) sementara MSFT tidak bisa (sangat informatif). Daftar ini **cuma bisa dirender setelah populasi sesi lengkap** — beda dari tiga daftar per-lensa yang bisa dirender begitu ticker itu sendiri selesai Fase B.
+ 
+ Tiap baris daftar menampilkan: ticker, stance lensa itu, confidence, jumlah flag. **Tidak lebih.** Baris daftar bukan tempat meringkas — ia tempat memutuskan mau klik atau tidak.
+ 
+@@ -193,7 +193,8 @@ Posisinya mengikat, bukan preferensi tata letak. Di atas, ia jadi verdict yang d
+ | `divergences[]` | Klaim yang berbeda, + posisi tiap modul, + **`root_cause`**, + sitasi |
+ | `narrative` | Rangkuman naratif |
+ | `confidence` | **Sama dengan confidence terendah dari tiga modul** — tampilkan modul mana sumbernya |
+-| `full_convergence` | Kalau `true`, tampilkan penanda: ketiga lensa sepakat penuh → patut dicurigai (tes T2) |
++| `full_convergence` | Kalau `true`, tampilkan penanda: ketiga lensa sepakat penuh → patut dicurigai (tes T2, redefinisi D-14) |
++| `surprise` | Angka mentah + persentil terhadap populasi sesi — ini yang menentukan urutan di daftar Divergensi |
+ 
+ **`root_cause` adalah inti gunanya.** "Multibagger dan Quality/Compound berbeda" belum informasi. Yang informasi: *kenapa* — beda field yang dibaca, beda bobot atas field yang sama, salah satu terhalang `knowledge_gap`, atau beda cara merespons flag yang sama.
+ 
+diff --git a/03_LAYER2_SPECS/03_KNOWLEDGE.md b/03_LAYER2_SPECS/03_KNOWLEDGE.md
+index 0ba9435..5c7cefc 100644
+--- a/03_LAYER2_SPECS/03_KNOWLEDGE.md
++++ b/03_LAYER2_SPECS/03_KNOWLEDGE.md
+@@ -1,7 +1,7 @@
+ # Knowledge
+ 
+-**Status:** Aktif — revisi: bagian 6 (Valuasi) & 7 (Governance & Peristiwa Filing) ditambahkan, field relatif-peer dikeluarkan (lihat D-01, D-02, D-03 di `00_Foundation/04_DECISIONS.md`)
+-**Doc version:** 2.0.0
++**Status:** Aktif — revisi: bagian 6 (Valuasi) & 7 (Governance & Peristiwa Filing) ditambahkan, field relatif-peer dikeluarkan (D-01,D-02,D-03); bagian 3 dipecah 3a/3b (D-13)
++**Doc version:** 3.0.0
+ 
+ ## Definisi
+ 
+@@ -38,9 +38,13 @@ Profil per ticker, lima bagian tetap (field kosong ditandai `null` + status `mis
+ 
+ **2. Kesehatan Finansial** — tren revenue (YoY 4 kuartal terakhir, CAGR 3 & 5 tahun kalau data cukup), tren margin (gross/operating/net, per kuartal), struktur balance sheet (debt-to-equity, current ratio, posisi kas), tren cash flow (FCF per kuartal, FCF margin).
+ 
+-**3. Posisi Kompetitif (deskriptif)** — kategori model bisnis kalau bisa ditentukan dari data (mis. subscription/hardware/marketplace), konsentrasi revenue per segmen bisnis (dari 10-K kalau tersedia), skala absolut (revenue TTM, jumlah karyawan kalau ada).
++**3a. Posisi Kompetitif — Struktur (D-13)** — kategori model bisnis kalau bisa ditentukan dari data (mis. subscription/hardware/marketplace), konsentrasi revenue per segmen bisnis (dari 10-K kalau tersedia), skala absolut (revenue TTM, jumlah karyawan kalau ada), estimasi ukuran TAM kalau tersedia dari filing/riset pihak ketiga yang dikutip perusahaan.
+ 
+-> **Catatan (D-03):** field "pangsa revenue relatif terhadap total peer group" **dikeluarkan** dari sini. Field itu membuat Knowledge butuh pengetahuan tentang ticker lain, padahal Peer/Relative Comparison justru beroperasi *di atas* Knowledge — melingkar. Semua angka relatif-peer sekarang hidup di output Peer (`06_PEER_RELATIVE_COMPARISON.md`), bukan di sini. Bagian 3 tinggal berisi hal-hal yang bisa dihitung dari Evidence ticker itu sendiri.
++**3b. Posisi Kompetitif — Momentum (D-13)** — pertumbuhan tiap segmen bisnis (persen YoY/QoQ), tren guidance vs konsensus analis (naik/turun/sesuai, dari rilis berturut), sinyal akselerasi atau deselerasi (percepatan pertumbuhan dibanding kuartal sebelumnya).
++
++> **Kenapa bagian 3 dipecah (D-13):** 3a menjawab "seberapa besar ruangnya", 3b menjawab "apakah sedang bergerak ke arah situ". Quality/Compound cuma boleh membaca 3a — mesin yang awet tidak perlu sedang berakselerasi untuk dianggap awet, dan kalau Quality boleh membaca momentum, ia perlahan tergoda mengandalkannya dan menempel ke Multibagger (lihat D-12). Multibagger membaca keduanya, karena trajectory butuh tahu ruangnya (3a) dan geraknya (3b) sekaligus.
++>
++> **Catatan (D-03):** field "pangsa revenue relatif terhadap total peer group" **dikeluarkan** dari 3a. Field itu membuat Knowledge butuh pengetahuan tentang ticker lain, padahal Peer/Relative Comparison justru beroperasi *di atas* Knowledge — melingkar. Semua angka relatif-peer hidup di output Peer (`06_PEER_RELATIVE_COMPARISON.md`).
+ 
+ **4. Tren Historis** — performa harga (return 1/3/5 tahun), volatilitas historis (std dev harian, beta terhadap index), rekam jejak earnings (jumlah beat/miss dari N kuartal terakhir — angka faktual).
+ 
+@@ -62,6 +66,23 @@ Semua tetap tunduk aturan yang sama: fakta dan tanggal, **tanpa kata sifat evalu
+ 
+ > **Kenapa bagian ini ada (D-01):** sebelum revisi ini, Risk/Red-Flag Check menyebut sumbernya "Knowledge & Evidence" — padahal dokumen ini menutup dengan aturan bahwa Risk beroperasi di atas Knowledge, bukan Evidence mentah. Dua-duanya tidak bisa benar. Akarnya: Risk butuh field yang memang tidak ada di skema ini, jadi ia terpaksa menjangkau Evidence. Bagian 7 menutup lubang itu supaya invariant satu arah tetap utuh — dan sebagai bonus, Confidence jadi bisa mengukur kelengkapan data governance, yang mustahil selama field-nya cuma hidup di Evidence.
+ 
++## Akses Field Per Modul (D-12)
++
++`KnowledgeProfile` yang sama disusun sekali, tapi tiap modul reasoning cuma boleh membaca subset-nya. Ini bukan detail implementasi — ini yang membuat tiga modul benar-benar jadi tiga lensa, bukan satu lensa dengan tiga suara (lihat D-12 di `00_Foundation/04_DECISIONS.md` untuk pembelaan tiap baris).
++
++| Bagian | Multibagger | Quality/Compound | Speculative |
++|---|:---:|:---:|:---:|
++| 1 — Identitas | ✅ | ✅ | ✅ |
++| 2 — Kesehatan finansial | arah saja | ✅ penuh | ❌ |
++| 3a — Struktur | ✅ | ✅ | ❌ |
++| 3b — Momentum | ✅ | ❌ | ❌ |
++| 4 — Tren historis | ✅ | ✅ penuh | volatilitas saja |
++| 5 — Kepemilikan | ❌ | ✅ | ✅ |
++| 6 — Valuasi | ✅ | ✅ | ❌ |
++| 7 — Governance | ❌ | ✅ | ❌ |
++
++Pelanggaran batas ini — field di luar akses modul muncul di `context_used` atau mempengaruhi `stance` — adalah bug, bukan pilihan implementasi.
++
+ **Metadata** (menempel di setiap profil, bukan bagian terpisah): `evidence_snapshot_date`, `method_version`, daftar field yang berhasil diisi vs field yang diharapkan (jadi input langsung buat Confidence/Data Quality), daftar sumber Evidence yang dipakai.
+ 
+ ## Data Hilang / Tidak Lengkap
+diff --git a/03_LAYER2_SPECS/07_MODULE_MULTIBAGGER.md b/03_LAYER2_SPECS/07_MODULE_MULTIBAGGER.md
+index e3e9359..fc08636 100644
+--- a/03_LAYER2_SPECS/07_MODULE_MULTIBAGGER.md
++++ b/03_LAYER2_SPECS/07_MODULE_MULTIBAGGER.md
+@@ -1,7 +1,7 @@
+ # Module — Multibagger
+ 
+ **Status:** Aktif — revisi: kontrak output & aturan validasi flag ditambahkan (D-04)
+-**Doc version:** 2.1.0
++**Doc version:** 3.0.0
+ 
+ ## Definisi
+ 
+@@ -44,6 +44,28 @@ Aturan validasi yang berlaku ke modul ini (output **ditolak** kalau gagal):
+ 
+ **Kosakata:** `ruang_terbuka` · `ruang_sempit` · `ruang_tertutup` · `ruang_tak_terbaca`
+ 
++### Akses Field (D-12)
++
++**Boleh baca:** 1, 2 (arah saja), 3a, 3b, 4, 6, peer, `CatalystSet` (sekunder)
++**Tidak boleh baca:** 5 (kepemilikan), 7 (governance)
++
++### Kriteria & Tesis (D-13)
++
++**Multibagger = trajectory, bukan gap dan bukan momentum murni (D-13).**
++
++Bukan taruhan bahwa pasar belum tahu (Gap — nyaris mustahil dijadikan kriteria berbasis data tanpa jadi "saya lebih pintar dari pasar"). Bukan taruhan pada satu peristiwa (Momentum murni — itu pertanyaan Speculative). Melainkan: **kurva pertumbuhan yang sudah kelihatan sekarang, diteruskan 3–5 tahun, menghasilkan kelipatan dari basis sekarang — dan harga sekarang cuma mem-price tahun depan, bukan lima tahun ke depan.**
++
++Pembeda bersih dari Speculative: **Speculative butuh tanggal resolusi. Multibagger tidak** — trajectory jalan terus dengan atau tanpa satu peristiwa tertentu. Karena itu Multibagger boleh membaca `CatalystSet` cuma sebagai konteks sekunder (katalis bisa mempercepat kurva), bukan sebagai bahan utama stance.
++
++| Stance | Syarat |
++|---|---|
++| `ruang_terbuka` | Pertumbuhan segmen (3b) berakselerasi/infleksi positif · valuasi sekarang cuma masuk akal dengan asumsi pertumbuhan segera melambat · TAM (3a) masih ada headroom (peer group menunjukkan penetrasi/pangsa masih rendah) |
++| `ruang_sempit` | Pertumbuhan kuat, tapi valuasi (peer percentile) sudah tinggi — kelanjutannya sudah mulai di-price |
++| `ruang_tertutup` | Pertumbuhan datar/melambat dan TAM matang (peer group semua mapan, market-nya sendiri tidak tumbuh) |
++| `ruang_tak_terbaca` | 3b `missing`, atau peer group `low_sample_size` |
++
++**Draft komitmen pertama, diuji ke 3 kasus (D-13):** PG → `ruang_tertutup`. MSFT → `ruang_sempit` (Azure +40%, tapi sudah di-price). INTC → `ruang_tak_terbaca` — revisi dari klaim awal `ruang_terbuka`; external foundry $174M dari basis nyaris nol ternyata bukan kurva yang sudah kelihatan, baru opsi yang belum mulai. Ambang numerik belum diuji ke populasi luas.
++
+ Kosakata ini **tidak dipakai modul lain dan tidak bisa dipetakan ke kosakata modul lain** — pemetaan semacam itu dilarang dibuat (D-09). Versi sebelumnya memakai satu enum bersama (`compelling/interesting/weak`) untuk ketiga modul; itu skala ordinal yang langsung berubah jadi hitungan suara di kepala pembaca.
+ 
+ Di dalam kosakata ini urutan tetap ada dan sah — satu lensa, satu sumbu. Itulah yang membuat daftar lensa ini bisa diurutkan (D-08) tanpa melanggar Prinsip #3: yang dilarang adalah **menggabung** lensa, bukan mengurutkan di dalam satu lensa.
+diff --git a/03_LAYER2_SPECS/08_MODULE_QUALITY_COMPOUND.md b/03_LAYER2_SPECS/08_MODULE_QUALITY_COMPOUND.md
+index 4e24c70..193cc77 100644
+--- a/03_LAYER2_SPECS/08_MODULE_QUALITY_COMPOUND.md
++++ b/03_LAYER2_SPECS/08_MODULE_QUALITY_COMPOUND.md
+@@ -1,7 +1,7 @@
+ # Module — Quality / Compound
+ 
+ **Status:** Aktif — revisi: kontrak output & aturan validasi flag ditambahkan (D-04)
+-**Doc version:** 2.1.0
++**Doc version:** 3.0.0
+ 
+ ## Definisi
+ 
+@@ -44,6 +44,26 @@ Aturan validasi yang berlaku ke modul ini (output **ditolak** kalau gagal):
+ 
+ **Kosakata:** `compounding_kuat` · `compounding_rapuh` · `bukan_compounder` · `mesin_tak_terbaca`
+ 
++### Akses Field (D-12)
++
++**Boleh baca:** 1, 2 (penuh), 3a, 4 (penuh), 5, 6, 7, peer
++**Tidak boleh baca:** 3b (momentum), `CatalystSet`
++
++### Kriteria & Tesis (D-13)
++
++**Quality bertaruh pada kelanjutan, bukan perubahan (D-13).** Mesin ini jalan, dan pertanyaannya cuma apakah ia akan terus jalan — bukan apakah ada sesuatu yang baru akan terjadi.
++
++**Kenapa tidak boleh membaca 3b (momentum) atau `CatalystSet`:** mesin yang awet tidak perlu sedang berakselerasi untuk dianggap awet. Kalau Quality boleh melihat momentum, ia perlahan tergoda mengandalkannya dan menempel ke Multibagger — dua lensa jadi satu lensa berbaju dua (D-12).
++
++| Stance | Syarat |
++|---|---|
++| `compounding_kuat` | Margin (gross/operating) stabil atau naik N periode terakhir · FCF positif berturut · konsentrasi revenue di bawah ambang · percentile margin peer di atas median · tanpa flag governance severity tinggi yang belum direspons |
++| `compounding_rapuh` | Margin/FCF mulai turun, tapi 3a (model bisnis, posisi kompetitif) masih utuh — mesin melambat, belum berubah bentuk |
++| `bukan_compounder` | Kerugian struktural di bisnis inti, atau restatement, atau margin & FCF negatif bersamaan — mesin sudah jadi mesin lain |
++| `mesin_tak_terbaca` | Field kunci di 2/3a/7 `missing` melewati ambang |
++
++**Draft komitmen pertama, diuji ke 3 kasus (D-13):** PG → `compounding_kuat` (FCF productivity 82%, dividen naik 70 tahun berturut). INTC → `bukan_compounder` (GAAP EPS −0.73, foundry operating loss $2.4B/kuartal, restructuring $4.1B). **MSFT → `compounding_rapuh`** — GM 67.6% tersempit sejak 2022, capex kalender 2026 naik 61% dengan $25B dari itu murni inflasi harga komponen (bukan kapasitas tambahan). Diambil **tanpa pernah melihat Azure +40%** (itu 3b) — pembuktian langsung bahwa D-12 menghasilkan stance yang berbeda dari kalau semua field dibuka.
++
+ Kosakata ini **tidak dipakai modul lain dan tidak bisa dipetakan ke kosakata modul lain** — pemetaan semacam itu dilarang dibuat (D-09). Versi sebelumnya memakai satu enum bersama (`compelling/interesting/weak`) untuk ketiga modul; itu skala ordinal yang langsung berubah jadi hitungan suara di kepala pembaca.
+ 
+ Di dalam kosakata ini urutan tetap ada dan sah — satu lensa, satu sumbu. Itulah yang membuat daftar lensa ini bisa diurutkan (D-08) tanpa melanggar Prinsip #3: yang dilarang adalah **menggabung** lensa, bukan mengurutkan di dalam satu lensa.
+diff --git a/03_LAYER2_SPECS/09_MODULE_SPECULATIVE.md b/03_LAYER2_SPECS/09_MODULE_SPECULATIVE.md
+index ca1ff4c..1036cc0 100644
+--- a/03_LAYER2_SPECS/09_MODULE_SPECULATIVE.md
++++ b/03_LAYER2_SPECS/09_MODULE_SPECULATIVE.md
+@@ -1,7 +1,7 @@
+ # Module — Speculative
+ 
+ **Status:** Aktif — revisi: kontrak output & aturan validasi flag ditambahkan (D-04)
+-**Doc version:** 2.1.0
++**Doc version:** 3.0.0
+ 
+ ## Definisi
+ 
+@@ -44,6 +44,26 @@ Aturan validasi yang berlaku ke modul ini (output **ditolak** kalau gagal):
+ 
+ **Kosakata:** `asimetri_berkatalis` · `asimetri_tanpa_katalis` · `tanpa_asimetri` · `asimetri_tak_terbaca`
+ 
++### Akses Field (D-12)
++
++**Boleh baca:** 1, volatilitas (4), 5, `CatalystSet` (penuh), konteks makro
++**Tidak boleh baca:** 2 (kesehatan finansial), 3 (posisi kompetitif), 6 (valuasi)
++
++### Kriteria & Tesis (D-13)
++
++**Speculative bertaruh pada resolusi peristiwa, bukan pada kelanjutan atau trajectory (D-13).** Butuh tanggal — itu yang membedakannya dari Multibagger, yang trajectory-nya jalan terus dengan atau tanpa satu peristiwa tertentu.
++
++**Kenapa tidak boleh membaca valuasi (6):** ini batas lensa, bukan gaya bicara. Asimetri berkatalis tidak butuh harga masuk yang wajar untuk jadi asimetri — kalau boleh melihat valuasi, Speculative akan pelan-pelan berubah jadi Quality yang gugup.
++
++| Stance | Syarat |
++|---|---|
++| `asimetri_berkatalis` | ≥1 katalis `scheduled`/`expected` dalam horizon · hasil genuinely tidak pasti (ada gap guidance-vs-konsensus, atau outcome biner regulasi/trial) · volatilitas cukup untuk asimetri berarti |
++| `asimetri_tanpa_katalis` | Tidak ada katalis dalam horizon, tapi volatilitas tetap tinggi |
++| `tanpa_asimetri` | Tidak ada katalis, volatilitas rendah |
++| `asimetri_tak_terbaca` | `CatalystSet.status` degraded/missing |
++
++**Draft komitmen pertama, diuji ke 3 kasus (D-13):** PG → `tanpa_asimetri`. INTC → `asimetri_berkatalis` (ramp 18A, guidance $1.3B di atas konsensus). MSFT → `asimetri_berkatalis` (restrukturisasi kemitraan OpenAI 27 April, capex $3.4B di bawah konsensus meski beat semua metrik lain — celah ekspektasi yang jelas).
++
+ Kosakata ini **tidak dipakai modul lain dan tidak bisa dipetakan ke kosakata modul lain** — pemetaan semacam itu dilarang dibuat (D-09). Versi sebelumnya memakai satu enum bersama (`compelling/interesting/weak`) untuk ketiga modul; itu skala ordinal yang langsung berubah jadi hitungan suara di kepala pembaca.
+ 
+ Di dalam kosakata ini urutan tetap ada dan sah — satu lensa, satu sumbu. Itulah yang membuat daftar lensa ini bisa diurutkan (D-08) tanpa melanggar Prinsip #3: yang dilarang adalah **menggabung** lensa, bukan mengurutkan di dalam satu lensa.
+diff --git a/03_LAYER2_SPECS/11_AGGREGATOR_OUTPUT.md b/03_LAYER2_SPECS/11_AGGREGATOR_OUTPUT.md
+index aaf9102..382c356 100644
+--- a/03_LAYER2_SPECS/11_AGGREGATOR_OUTPUT.md
++++ b/03_LAYER2_SPECS/11_AGGREGATOR_OUTPUT.md
+@@ -1,7 +1,7 @@
+ # Aggregator & Output
+ 
+ **Status:** Aktif — revisi: kontrak output, urutan tampilan ditetapkan, larangan field verdict (D-04)
+-**Doc version:** 2.1.0
++**Doc version:** 3.0.0
+ 
+ ## Definisi
+ 
+@@ -44,7 +44,8 @@ Aturan mengikat (S1–S6 di D-07), yang terpenting:
+ 
+ - **Wajib sitasi** — klaim yang tidak bisa menunjuk ke modul + field spesifik tidak boleh ditulis.
+ - **Confidence = terendah dari tiga modul**, bukan rata-rata. Rangkuman tidak boleh lebih yakin dari input terlemahnya.
+-- **Ketiga stance sama → `full_convergence=true`** dan picu tes T2. Konvergensi penuh adalah sinyal Multi-Lens mungkin cuma klaim di atas kertas — justru saat paling nyaman itulah paling perlu dicurigai.
++- **Ketiga stance sama → `full_convergence=true`** dan picu tes T2 (definisi ulang D-14: mutual information antar lensa, bukan "stance sama >90%" yang sudah tidak bisa dihitung sejak D-09).
++- **`surprise` (D-14)** menggantikan jumlah label berbeda sebagai dasar urutan daftar Divergensi (D-08). Dihitung dari populasi sesi, butuh Fase B seluruh kandidat selesai lebih dulu.
+ - **Ditampilkan di bawah tiga kolom**, tidak di atas (urusan dashboard, tapi mengikat).
+ 
+ Bentuknya di `01_ARCHITECTURE/04_DATA_CONTRACTS.md` §7.
+diff --git a/05_RESEARCH/README.md b/05_RESEARCH/README.md
+new file mode 100644
+index 0000000..7195d9f
+--- /dev/null
++++ b/05_RESEARCH/README.md
+@@ -0,0 +1,11 @@
++# 05_RESEARCH — Jejak Empiris di Balik D-12/D-13/D-14
++
++Folder ini bukan spec — ini bukti kerja yang menghasilkan D-12, D-13, D-14 di `00_Foundation/04_DECISIONS.md`. Disimpan supaya keputusan itu bisa ditelusuri balik ke datanya, bukan cuma dipercaya karena tertulis rapi.
++
++1. `tes-20-saham-draft.md` — seleksi 20 saham + peta akses field awal + kasus INTC penuh
++2. `tes-20-saham-hasil-grupA.md` — PG & MSFT, temuan yang membongkar metrik "jumlah divergensi" (→ D-14)
++3. `kriteria-modul-draft-v1.md` — draft kriteria dua-penulis yang jadi dasar D-13
++
++**Status semua isi folder ini: draft kerja, bukan final.** Ambang numerik di dalamnya belum diuji ke populasi luas — cuma ke 3 saham. Kalau direvisi, revisi di sini dan di D-13, jangan cuma di salah satu.
++
++© AlphaForge v2
+diff --git a/05_RESEARCH/kriteria-modul-draft-v1.md b/05_RESEARCH/kriteria-modul-draft-v1.md
+new file mode 100644
+index 0000000..ccf9c7f
+--- /dev/null
++++ b/05_RESEARCH/kriteria-modul-draft-v1.md
+@@ -0,0 +1,105 @@
++# Kriteria Tiga Modul — Draft Komitmen v1
++
++**Status:** Draft kerja, bukan spec resmi — belum masuk repo
++**Tanggal:** 16 Juli 2026
++**Basis:** jawaban 4-pasangan + kasus INTC/PG/MSFT dari tes sebelumnya
++
++---
++
++## 0. Ini Sekarang Punya Siapa
++
++Kamu bilang "percayakan ke saya sebagai arsitek." Saya kerjakan — tapi harus jujur soal apa artinya itu.
++
++Sampai titik ini saya nolak nulis kriteria karena itu tesis investasimu, bukan tugas spec. Sekarang kamu delegasikan eksplisit, dua kali. Saya hormatin itu — tapi hasilnya adalah **kriteria ini sekarang punya dua penulis**, dan kamu perlu baca sampai habis, bukan cuma acc. Kalau ada yang kerasa salah pas dibaca, itu sinyal paling berharga yang bisa kamu kasih — jangan ditelan cuma karena "katanya arsitek".
++
++Ini bukan jawaban final. Ini draft yang siap distress-test persis kayak D-08 saya stress-test pakai INTC kemarin dan ketahuan salah.
++
++---
++
++## 1. Fork Gap vs Momentum — Diselesaikan Lewat Opsi Ketiga
++
++Saya tanya kamu pilih Gap (ada yang belum diketahui pasar) atau Momentum (arus udah mulai kelihatan). Jawabanmu nunjuk ke Momentum — *"mulai dilirik investor"*, *"AI sekarang trend"*.
++
++Tapi Momentum murni ada masalah: itu nyaris sama persis sama pertanyaan Speculative ("ada asimetri berkatalis?"). Kalau Multibagger cuma "ikutin arus yang lagi kuat", dia jadi Speculative dengan nama beda.
++
++**Yang sebenarnya kamu tunjuk, saya pikir, adalah opsi ketiga: TRAJECTORY.**
++
++> Multibagger bukan taruhan bahwa pasar belum tahu (Gap), dan bukan taruhan pada satu peristiwa (Momentum/katalis). Dia taruhan bahwa **kurva pertumbuhan yang udah kelihatan sekarang, kalau diteruskan 3-5 tahun, menghasilkan kelipatan dari basis sekarang — dan harga sekarang cuma nge-price tahun depan, bukan lima tahun ke depan.**
++
++Cek ke jawabanmu: PLTR "mulai dilirik investor" bukan satu event yang selesai/nggak selesai — itu **cerita ekspansi multi-tahun** (dari kontrak pemerintah ke komersial, adopsi AIP). TSM "AI trend" bukan satu katalis — itu **siklus pembangunan kapasitas bertahun-tahun**. Keduanya trajectory, bukan event tunggal.
++
++Ini juga yang membedakan dari Speculative secara bersih: **Speculative butuh tanggal resolusi. Multibagger nggak butuh tanggal — dia butuh kurva yang terus, dengan atau tanpa satu peristiwa tertentu.**
++
++Dan ini yang bikin kasus INTC saya kemarin (external foundry $174M) sebenarnya **lebih lemah** dari PLTR/TSM versi kamu — $174M bukan trajectory yang udah kelihatan, itu opsi yang belum mulai. Instingmu lebih tajam dari contoh yang saya karang.
++
++---
++
++## 2. Ini Menjawab Pertanyaan Terbuka Kemarin: Bagian 3 Dipecah
++
++Trajectory butuh dua bahan yang beda sifat: **struktur** (seberapa besar TAM-nya, posisi kompetitif macam apa) dan **momentum** (pertumbuhan segmen sekarang, guidance vs konsensus).
++
++Quality butuh yang pertama doang. Multibagger butuh dua-duanya.
++
++**Keputusan: bagian 3 Knowledge dipecah.**
++
++| | Isi | Multibagger | Quality |
++|---|---|:---:|:---:|
++| **3a — Struktur** | model bisnis, konsentrasi revenue, ukuran TAM, posisi kompetitif | ✅ | ✅ |
++| **3b — Momentum** | pertumbuhan segmen, tren guidance vs konsensus, akselerasi/deselerasi | ✅ | ❌ |
++
++Ini mengunci temuan MSFT kemarin, bukan membatalkannya: Quality **tetap nggak boleh** lihat Azure +40% (itu 3b). Yang dia lihat cuma margin GM 67.6% (tersempit sejak 2022) dan capex $190B yang seperdelapannya cuma bayar harga komponen lebih mahal (bagian 2 + 3a). `compounding_rapuh` tetap keluar — bukan karena saya nggak ngasih Quality lihat kabar baiknya, tapi karena kabar baiknya memang bukan kategori yang Quality tanya.
++
++---
++
++## 3. Kriteria Tiap Modul — Konkret, Bukan Vibe
++
++### Quality / Compound
++**Baca:** 1, 2 (penuh), 3a, 4 (penuh), 5, 6, 7, peer. **Nggak baca:** 3b, `CatalystSet`.
++
++| Stance | Syarat |
++|---|---|
++| `compounding_kuat` | Margin (gross/operating) stabil atau naik N periode terakhir · FCF positif berturut · konsentrasi revenue di bawah ambang · percentile margin peer di atas median · tanpa flag governance severity tinggi yang belum direspons |
++| `compounding_rapuh` | Margin/FCF mulai turun, TAPI model bisnis & posisi kompetitif (3a) masih utuh — mesin melambat, belum berubah bentuk |
++| `bukan_compounder` | Kerugian struktural di bisnis inti, ATAU restatement, ATAU margin & FCF dua-duanya negatif bersamaan — mesin sudah jadi mesin lain |
++| `mesin_tak_terbaca` | Field kunci di 2/3a/7 `missing` melewati ambang |
++
++*(MSFT: margin turun + capex naik 61% dengan 1/8 cuma inflasi harga → `compounding_rapuh`, bukan `bukan_compounder` — model bisnisnya (3a) masih utuh, cuma mesinnya lagi mahal dijalanin.)*
++
++### Multibagger
++**Baca:** 1, 2 (arah saja), 3a, 3b, 4, 6, peer, `CatalystSet` (sekunder). **Nggak baca:** 5, 7.
++
++| Stance | Syarat |
++|---|---|
++| `ruang_terbuka` | Pertumbuhan segmen (3b) berakselerasi/infleksi positif · valuasi sekarang cuma masuk akal kalau diasumsikan pertumbuhan segera melambat · TAM (3a) masih ada headroom (peer group nunjukin penetrasi/pangsa masih rendah) |
++| `ruang_sempit` | Pertumbuhan kuat, TAPI valuasi (peer percentile) udah tinggi — kelanjutannya udah mulai di-price |
++| `ruang_tertutup` | Pertumbuhan datar/melambat DAN TAM matang (peer group semua mapan, market-nya sendiri nggak tumbuh) |
++| `ruang_tak_terbaca` | 3b `missing`, atau peer group `low_sample_size` |
++
++*(PLTR/TSM versi kamu: pertumbuhan segmen jelas berakselerasi + TAM AI/foundry masih headroom besar → `ruang_terbuka`. INTC versi saya: $174M dari basis nyaris nol bukan akselerasi yang udah kelihatan → lebih pas `ruang_tak_terbaca` atau `ruang_sempit`, bukan `ruang_terbuka` seperti saya klaim kemarin. Saya revisi klaim saya sendiri di sini.)*
++
++### Speculative
++**Baca:** 1, volatilitas (4), 5, `CatalystSet` (penuh), konteks makro. **Nggak baca:** 2, 3, 6.
++
++| Stance | Syarat |
++|---|---|
++| `asimetri_berkatalis` | Minimal satu katalis `scheduled`/`expected` dalam horizon · hasil katalis genuinely nggak pasti (ada gap guidance vs konsensus, atau outcome biner regulasi/trial) · volatilitas cukup buat asimetri berarti |
++| `asimetri_tanpa_katalis` | Nggak ada katalis dalam horizon, tapi volatilitas tetap tinggi |
++| `tanpa_asimetri` | Nggak ada katalis, volatilitas rendah |
++| `asimetri_tak_terbaca` | `CatalystSet.status` degraded/missing |
++
++**Beda dari Multibagger meski sama-sama baca katalis:** Speculative nanya *"katalis ini resolve gimana"* — perlu tanggal. Multibagger nanya *"kurvanya lanjut nggak"* — nggak perlu tanggal, katalis cuma bumbu.
++
++---
++
++## 4. Yang Saya Nggak Berani Putuskan Sendiri
++
++- **Ambang numerik** (berapa persen margin turun baru `compounding_rapuh`, berapa lama pertumbuhan flat baru `ruang_tertutup`) — ini butuh diuji lewat lebih banyak saham, bukan diputuskan dari kursi.
++- **Bagian 3a/3b ini pecahan yang benar,** atau kamu punya batas lain di kepala yang belum keluar. Cara ngeceknya: coba tebak treatment KO vs COST pakai kriteria di atas, terus bandingin sama insting kamu. Kalau meleset, itu bagian 3a/3b-nya yang salah gambar, bukan angkanya.
++
++## 5. Langkah Berikutnya
++
++Kalau kriteria ini kerasa "kok gitu doang" atau "bukan ini yang saya maksud" di bagian manapun — **itu sinyal, bukan formalitas**. Bilang di bagian mana. Kalau kerasa benar, saya formalkan jadi D-13 di repo dan kita run sesi buat lihat angka *surprise*-nya beneran nangkep sesuatu apa nggak.
++
++---
++
++© AlphaForge v2 — draft kerja, dua penulis
+diff --git a/05_RESEARCH/tes-20-saham-draft.md b/05_RESEARCH/tes-20-saham-draft.md
+new file mode 100644
+index 0000000..7b870e2
+--- /dev/null
++++ b/05_RESEARCH/tes-20-saham-draft.md
+@@ -0,0 +1,237 @@
++# Tes 20 Saham — Draft untuk Dibantah
++
++**Status:** Draft. Bukan hasil. Dibuat untuk dibongkar.
++**Tanggal:** 16 Juli 2026
++**Peringatan data:** angka di bawah dari rilis publik Q1 FY2026 (April 2026) dan pengetahuan sampai Januari 2026. **Verifikasi ulang sebelum dipakai untuk apa pun.** Ini bukan analisa investasi — ini tes mekanisme yang kebetulan memakai perusahaan nyata sebagai bahan.
++
++---
++
++## 0. Koreksi: Ini Bukan Tes yang Saya Sarankan
++
++Tes yang saya sarankan berbunyi: *"pilih 20 saham **yang kamu udah punya pandangan soal itu**."*
++
++Bagian itu bukan hiasan — itu **alat ukurnya**. Tes aslinya membandingkan keluaran tiga lensa terhadap **prior kamu**. Pertanyaannya: *"apakah lensa-lensa ini ngasih saya sesuatu yang saya belum tahu?"* Tanpa prior kamu, tidak ada pembanding. Tidak ada "belum tahu".
++
++Saya tidak punya pandangan kamu. Jadi versi ini **tidak bisa** menjawab pertanyaan itu.
++
++Yang bisa dijawab versi ini lebih sempit, tapi tetap nyata dan tetap bisa gagal:
++
++> **Kalau tiga lensa disusun dengan sungguh-sungguh berbeda, apakah mereka berselisih di saham nyata — atau runtuh jadi satu jawaban dalam tiga dialek?**
++
++Itu keluhan #2 saya kemarin. Bisa dites tanpa kamu. **Jangan pakai ini sebagai pengganti tes kamu** — pakai sebagai sesuatu untuk dibantah, karena membantah proposal konkret biasanya lebih cepat memunculkan keyakinan daripada halaman kosong.
++
++---
++
++## 1. Dua Puluh Saham — dan Logika di Baliknya
++
++Karena sumbu "yang kamu suka/nggak suka" hilang, saya ganti sumbunya jadi: **dirancang supaya multi-lens bisa gagal.**
++
++Kalau saya cuma pilih saham yang jelas-jelas beda di tiap lensa, saya cuma membuktikan diri sendiri. Jadi hampir sepertiga daftar ini dipilih **karena saya menduga ketiga lensa akan sepakat** — kalau dugaan itu benar, itu bukti melawan multi-lens, dan itu justru yang perlu ditemukan.
++
++### A. Risiko konvergensi — dugaan: ketiganya sepakat (6)
++Kalau lensa runtuh, di sini ketahuannya.
++
++| Ticker | Kenapa di sini |
++|---|---|
++| **KO** | Compounder mapan, tumbuh lambat, tanpa katalis. Ketiganya "harusnya" bilang hal yang sama dengan kata berbeda |
++| **JNJ** | Sama, plus litigasi yang semua lensa lihat |
++| **PG** | Uji paling murni: tidak ada yang menarik dari sudut mana pun |
++| **COST** | Kualitas jelas, valuasi jelas mahal — dua fakta, semua lensa lihat keduanya |
++| **MSFT** | Bagus di semua sudut. Kalau ketiganya bilang bagus, apa gunanya tiga? |
++| **AAPL** | Kasus di mockup. Cek apakah "divergensi"-nya asli |
++
++### B. Kandidat divergensi struktural — dugaan: ketiganya berselisih (6)
++
++| Ticker | Kenapa di sini |
++|---|---|
++| **INTC** | **Kasus utama.** GAAP rugi tapi DCAI +22%; foundry bakar $2.4B/kuartal tapi 18A ramp. Tiap lensa punya fakta favoritnya sendiri |
++| **PLTR** | Pertumbuhan vs valuasi vs katalis — tiga cerita berbeda dari satu perusahaan |
++| **MRNA** | Pipeline = katalis; keuangan = rusak. Spekulatif dan quality harusnya bertabrakan keras |
++| **NKE** | Compounder yang lagi patah. Lensa quality punya sejarah, spekulatif punya turnaround |
++| **PFE** | Cliff paten vs dividen vs akuisisi |
++| **TSM** | Kualitas + siklus + geopolitik sebagai katalis biner |
++
++### C. Uji data buruk — dugaan: keadaan `*_tak_terbaca` menyala (4)
++Kalau ketiga lensa tumbang bareng saat data kurang, `tak_terbaca` tidak berguna sebagai pembeda.
++
++| Ticker | Kenapa di sini |
++|---|---|
++| **IONQ** | Nyaris tanpa fundamental bermakna. P/E null, EV/EBITDA null |
++| **LUNR** | Small cap, filing tipis, peer group nyaris tidak ada |
++| **RIVN** | Bakar kas — margin bermakna? |
++| **TDOC** | Growth patah, goodwill impairment berulang |
++
++### D. Uji sensitivitas konteks Layer 1 (4)
++Apakah `context_used` benar-benar mengubah sesuatu, atau cuma dilampirkan?
++
++| Ticker | Kenapa di sini |
++|---|---|
++| **ASML** | Siklus semi — Business Cycle Stage harusnya menggigit |
++| **NVDA** | Ekstrem di tiap dimensi; sentimen harusnya relevan |
++| **SOFI** | Sensitif yield curve secara langsung |
++| **GME** | Sentimen adalah tesisnya. Kalau lensa quality tidak bilang `bukan_compounder` di sini, kriterianya rusak |
++
++---
++
++## 2. Tiga Lensa — dan Inti Seluruh Tes
++
++Ini bagian yang penting. Sisanya turunan.
++
++Kemarin saya khawatir divergensinya cuma **beda dialek, bukan beda pandangan** — karena ketiga modul baca `KnowledgeProfile` yang sama. Kalau input identik, yang bisa beda cuma bobot, dan `root_cause: different_weights` akan jadi jawaban tiap saat.
++
++Draft ini mengambil jalan sebaliknya: **tiap lensa cuma boleh baca sebagian Knowledge.** Itu satu-satunya cara divergensinya jadi struktural.
++
++### Peta Akses Field
++
++| Bagian Knowledge | Multibagger | Quality/Compound | Speculative |
++|---|:---:|:---:|:---:|
++| 1 — Identitas | ✅ | ✅ | ✅ |
++| 2 — Kesehatan finansial | **arah saja** | ✅ **penuh** | ❌ |
++| 3 — Posisi kompetitif | ✅ | ✅ | ❌ |
++| 4 — Tren historis | ✅ | ✅ **penuh** | **volatilitas saja** |
++| 5 — Kepemilikan | ❌ | ✅ | ✅ |
++| 6 — Valuasi | ✅ | ✅ | ❌ |
++| 7 — Governance | ❌ | ✅ | ❌ |
++| `CatalystSet` | ✅ | ❌ | ✅ **penuh** |
++| Peer | ✅ | ✅ | ❌ |
++
++Tiap ❌ adalah **klaim yang bisa salah**, dan tiap satu wajib dibela:
++
++- **Speculative tidak boleh lihat kesehatan finansial (2).** Klaimnya: asimetri berkatalis tidak peduli margin. GME tidak naik karena neraca. Kalau lensa spekulatif boleh lihat bagian 2, ia akan pelan-pelan berubah jadi lensa quality yang gugup.
++- **Speculative tidak boleh lihat valuasi (6).** Sudah ada di mockup: *"valuasi tidak relevan tanpa katalis."* Itu bukan gaya bicara — itu batas lensanya.
++- **Multibagger tidak boleh lihat governance (7).** Klaimnya: dilusi & auditor itu urusan Risk, dan Risk sudah memaksa respons lewat `flag_responses`. Multibagger tidak perlu jalur kedua ke fakta yang sama.
++- **Quality/Compound tidak boleh lihat `CatalystSet`.** Ini yang paling saya yakini. Compounder yang butuh katalis bukan compounder. Kalau lensa quality boleh lihat katalis, ia akan mulai membenarkan tesis lemah dengan peristiwa mendatang — persis penyakit yang mau kamu hindari.
++- **Multibagger cuma lihat "arah" bagian 2**, bukan angkanya. Klaimnya: multibagger butuh tahu keuangannya membaik atau memburuk, tidak butuh ROE sampai dua desimal.
++
++**Kalau kamu tidak setuju satu pun di atas, di situlah tesis kamu berada.** Itu tujuan dokumen ini.
++
++### Tiga pertanyaan
++
++| Lensa | Pertanyaan | Kosakata |
++|---|---|---|
++| Multibagger | Ada ruang untuk kelipatan besar? | `ruang_terbuka` · `ruang_sempit` · `ruang_tertutup` · `ruang_tak_terbaca` |
++| Quality/Compound | Ini mesin compounding? | `compounding_kuat` · `compounding_rapuh` · `bukan_compounder` · `mesin_tak_terbaca` |
++| Speculative | Ada asimetri berkatalis? | `asimetri_berkatalis` · `asimetri_tanpa_katalis` · `tanpa_asimetri` · `asimetri_tak_terbaca` |
++
++---
++
++## 3. INTC Dikerjakan Penuh — Kasus Uji Utama
++
++Data: rilis Q1 FY2026 Intel (23 April 2026). Tiap lensa **cuma boleh menyentuh field yang diizinkan** di atas.
++
++### Lensa 1 — Multibagger
++
++Boleh lihat: identitas, arah bagian 2, posisi kompetitif, tren, valuasi, katalis, peer.
++
++- Arah bagian 2: **membaik.** Revenue $13.6B (+7% YoY), non-GAAP GM 41% naik dari 39.2%, non-GAAP op margin 12.3% dari 5.4%.
++- Posisi kompetitif: DCAI $5.1B **+22% YoY**. Bisnis terkait AI tumbuh 40% YoY, kini **60% dari revenue**.
++- Yang belum berbayar: external foundry revenue cuma **$174 juta** — dari total foundry $5.4B. Opsi yang belum jadi apa-apa.
++
++**Stance: `ruang_terbuka`** — bukan karena Intel bagus, tapi karena external foundry ~$0 adalah opsi yang belum dihargai. Kalau 18A menang pelanggan luar, sumbu revenue baru terbuka dari basis nol. Itu bentuk ruang.
++
++**Confidence: rendah.** Tesisnya bersandar pada satu angka yang belum terjadi.
++
++### Lensa 2 — Quality/Compound
++
++Boleh lihat: bagian 2 **penuh**, posisi kompetitif, tren penuh, kepemilikan, valuasi, governance, peer. **Tidak boleh lihat katalis.**
++
++- GAAP EPS **$(0.73)**. Bukan non-GAAP.
++- Foundry operating loss **$2.4B satu kuartal**. Membaik $72 juta QoQ — sekitar **3%**.
++- Restructuring & charges **$4.1B**, terutama goodwill impairment Mobileye. Akuisisi yang ditulis turun.
++- Fab 34: beli balik 49% seharga **$7.7B tunai + $6.5B utang baru**.
++- Adjusted FCF **−$2B**. Operating cash flow $1.1B, CapEx $5B.
++
++**Stance: `bukan_compounder`** — bukan `compounding_rapuh`. Mesin yang bakar $2.4B per kuartal di satu segmen, menulis turun akuisisi $4.1B, dan menambah $6.5B utang untuk membeli aset yang sudah dipakainya, bukan mesin compounding yang sedang lemah. Itu mesin yang berbeda.
++
++**Confidence: tinggi.** Fakta-faktanya tidak ambigu dan tidak butuh masa depan.
++
++> Perhatikan lensa ini **tidak pernah menyentuh** DCAI +22% atau 18A ramp. Bukan karena mengabaikan — karena **tidak diizinkan melihatnya**. Katalis bukan bahan tesis compounding.
++
++### Lensa 3 — Speculative
++
++Boleh lihat: identitas, volatilitas, kepemilikan, `CatalystSet`. **Tidak boleh lihat bagian 2 atau valuasi.**
++
++- Katalis: **ramp 18A** — `scheduled`, berlanjut sepanjang 2026. Yield "ahead of internal projections".
++- Katalis: **guidance Q2 $13.8–14.8B vs konsensus ~$13.0B**. Selisih ~$1.3B. Ekspektasi tertinggal kenyataan.
++- Katalis negatif: manajemen memandu **PC TAM turun low-double-digits di H2**. Terjadwal, diketahui, arah berlawanan.
++- Volatilitas: tinggi.
++
++**Stance: `asimetri_berkatalis`** — ada peristiwa terjadwal dengan hasil biner (yield 18A, menang/tidaknya pelanggan foundry luar), dan celah ekspektasi yang terukur.
++
++**Confidence: sedang.** Dua katalis berlawanan arah di jendela yang sama.
++
++### Peta konvergensi
++
++| | |
++|---|---|
++| **Sepakat** | *(kosong)* — tidak ada satu pun klaim yang ketiganya sentuh |
++| **Berbeda** | ruang_terbuka / bukan_compounder / asimetri_berkatalis |
++| **`root_cause`** | **`different_fields`** — bukan `different_weights` |
++
++**Ini temuannya.** Ketiga lensa tidak berselisih soal arti fakta yang sama. Mereka **memegang fakta yang berbeda sama sekali**:
++
++- Multibagger memegang `external_foundry_revenue: $174M`
++- Quality memegang `gaap_eps: -0.73`, `foundry_op_loss: -2.4B`
++- Speculative memegang `catalyst: 18A_ramp`, `guidance_vs_consensus: +1.3B`
++
++**Nol tumpang tindih.** Bagian "Sepakat" kosong bukan karena kebetulan — karena tidak ada field yang boleh dilihat lebih dari satu lensa di kasus ini.
++
++---
++
++## 4. Temuan
++
++### Temuan utama: divergensi itu nyata — **tapi hanya kalau akses field dibatasi**
++
++Kekhawatiran #2 saya kemarin benar, dan sekaligus bisa diobati.
++
++Kalau ketiga lensa boleh baca ketujuh bagian Knowledge, ketiganya akan melihat GAAP rugi $(0.73) dan foundry loss $2.4B. Angka sekeras itu **menyeret semua lensa ke jawaban yang sama**. Kamu akan dapat tiga variasi dari "bagus tapi rusak", dan `root_cause` akan selalu `different_weights`.
++
++Pembatasan akses **bukan optimasi**. Itu yang **menciptakan lensanya**. Tanpa itu kamu tidak punya tiga lensa — kamu punya satu lensa dengan tiga suara.
++
++**Ini keputusan arsitektur, dan belum ada di spec manapun.** Kalau kamu setuju, ia perlu jadi D-12, dan `KnowledgeProfile` perlu punya kontrak akses per modul yang ditegakkan — bukan diharapkan.
++
++### Temuan kedua: risiko konvergensi ada di grup A, bukan di INTC
++
++INTC memang berselisih. Tapi INTC dipilih **karena** saya menduga begitu. Uji sesungguhnya ada di KO / PG / MSFT — dan di sana, dugaan saya: bahkan dengan akses field dibatasi, ketiganya masih akan sepakat. PG tidak punya katalis, tidak punya ruang, dan compounding-nya jelas. Tiga lensa akan bilang tiga hal yang semuanya berarti "ya sudah".
++
++Kalau itu benar, **itu bukan kegagalan** — itu memberi tahu di mana multi-lens berguna: pada perusahaan yang sedang berubah, bukan pada perusahaan yang mapan. Dan itu punya konsekuensi keras ke Screening: mungkin funnel-nya seharusnya menyaring **untuk perubahan**, bukan untuk kualitas.
++
++Saya tidak bisa memastikan tanpa mengerjakan enam saham grup A. Belum saya kerjakan — sengaja. Lihat §5.
++
++### Temuan ketiga: `Sepakat` yang kosong itu mencurigakan
++
++Di INTC, bagian `agreements[]` **kosong sama sekali**. Kalau itu terjadi di banyak saham, `synthesis` kehilangan separuh gunanya — peta yang cuma punya divergensi bukan peta, itu daftar.
++
++Mungkin peta akses saya terlalu ekstrem. Mungkin harus ada **inti bersama** yang ketiganya lihat (bagian 1 + arah bagian 2?), supaya `agreements[]` punya bahan. Ini pertanyaan terbuka yang saya buat sendiri dan tidak bisa saya jawab tanpa kamu.
++
++---
++
++## 5. Yang Sengaja Tidak Saya Kerjakan
++
++**Sembilan belas saham sisanya.**
++
++Bukan karena kehabisan waktu. Kalau saya kerjakan 60 analisa, kamu akan punya dokumen rapi berisi **tesis investasi saya**, dan tekanan untuk menerimanya karena sudah terlanjur ada. Itu persis kegagalan #6 dengan lebih banyak halaman.
++
++Satu saham cukup untuk membuktikan mekanismenya bisa berselisih. Sembilan belas lagi cuma menumpuk penilaian saya di atas penilaianmu.
++
++**Yang saya kerjakan:** seleksi 20 dengan logika yang bisa kamu bantah, peta akses field yang bisa kamu tolak baris per baris, dan satu kasus penuh yang menunjukkan divergensi struktural itu mungkin.
++
++**Yang harus kamu kerjakan:** enam saham grup A. Di situ tesnya menggigit — bukan di INTC.
++
++---
++
++## 6. Bantah Saya Di Sini
++
++Urut dari yang paling mungkin salah:
++
++1. **Quality tidak boleh lihat katalis.** Ini yang paling saya yakini dan karena itu paling perlu diserang. Kalau kamu pikir compounder yang punya katalis lebih baik dari yang tidak — peta akses saya salah, dan lensa quality kamu berbeda dari saya.
++2. **Speculative buta terhadap valuasi.** Kalau menurutmu asimetri butuh harga masuk yang wajar, ❌ di bagian 6 harus jadi ✅ — dan seluruh divergensi INTC berubah.
++3. **`bukan_compounder`, bukan `compounding_rapuh` untuk INTC.** Saya menarik garis di "mesin yang berbeda". Kalau menurutmu Intel compounder yang lagi sakit, kriteria quality kamu jauh lebih longgar dari saya — dan itu **informasi paling berharga** yang bisa keluar dari dokumen ini.
++4. **`ruang_terbuka` untuk INTC.** Saya sandarkan pada external foundry $174M sebagai opsi. Itu bisa dibilang mengarang optionality dari kegagalan.
++5. **Komposisi 20 saham.** Enam risiko-konvergensi terlalu banyak? Terlalu sedikit?
++
++Balas dengan nomornya saja kalau mau cepat. Yang mana pun kamu bantah, di situ kriteria modul kamu mulai kelihatan.
++
++---
++
++© AlphaForge v2 — draft kerja, bukan spec
+diff --git a/05_RESEARCH/tes-20-saham-hasil-grupA.md b/05_RESEARCH/tes-20-saham-hasil-grupA.md
+new file mode 100644
+index 0000000..8571623
+--- /dev/null
++++ b/05_RESEARCH/tes-20-saham-hasil-grupA.md
+@@ -0,0 +1,176 @@
++# Tes 20 Saham — Hasil Grup A
++
++**Lanjutan dari:** `tes-20-saham-draft.md`
++**Tanggal:** 16 Juli 2026
++**Data:** rilis publik Q3 FY2026 (April 2026). Verifikasi ulang sebelum dipakai. Bukan analisa investasi.
++
++---
++
++## 0. Ringkasan
++
++Dugaan saya di draft: *"bahkan dengan akses field dibatasi, grup A tetap akan sepakat."*
++
++**Setengah benar.** PG persis seperti dugaan. **MSFT membantah saya telak** — dan bantahan itu memunculkan cacat yang jauh lebih dalam dari yang sedang saya tes.
++
++Cacatnya ada di D-08. Buatan saya, kemarin.
++
++---
++
++## 1. PG — Dugaan Benar
++
++Data: Q3 FY2026 (24 April 2026). Net sales $21.2B (+7%), organic +3% (volume +2%, harga +1%), core EPS $1.59 (+3%).
++
++| Lensa | Fakta yang dipegang (sesuai izin akses) | Stance |
++|---|---|---|
++| **Multibagger** | Organic +3%. Sepuluh kategori tumbuh, tapi semuanya tipis. Mega cap consumer staples | `ruang_tertutup` |
++| **Quality** | Core GM 50.0%, core op margin 22.2% (dua-duanya ~1pt di bawah LY). Adjusted FCF productivity **82%**. Dividen naik **70 tahun berturut**. $10B dividen + $5B buyback | `compounding_kuat` |
++| **Speculative** | Volatilitas rendah. Tidak ada katalis emiten. Manajemen menunda guidance FY27 karena perang Iran | `tanpa_asimetri` |
++
++Tiga label berbeda. **Sepakat: kosong. Berbeda: 3.**
++
++Secara mekanis, PG terlihat **lebih divergen dari INTC** — INTC juga tiga label berbeda, tapi PG menyapu bersih semua sumbu.
++
++Itu absurd, dan di situ letak masalahnya.
++
++---
++
++## 2. MSFT — Dugaan Saya Salah
++
++Saya taruh MSFT di grup A dengan alasan *"bagus di semua sudut — kalau ketiganya bilang bagus, apa gunanya tiga?"*
++
++Ternyata datanya jauh dari itu. Q3 FY2026 (29 April 2026):
++
++| Lensa | Fakta yang dipegang | Stance |
++|---|---|---|
++| **Multibagger** | Revenue $82.9B **+18%**, Azure **+40%** (di atas guidance sendiri 37–38%), Microsoft Cloud tembus $54.5B pertama kali. Tapi basisnya mega cap | `ruang_sempit` |
++| **Quality** | **GM 67.6% — tersempit sejak 2022.** Capex kalender 2026 **$190B, naik 61%**, dan **$25B dari itu murni inflasi harga komponen, bukan tambahan kapasitas**. FCF menurun. Headcount turun di 2027 | `compounding_rapuh` |
++| **Speculative** | Kemitraan OpenAI **direstrukturisasi 27 April** — rev-share keluar dihapus, lisensi non-eksklusif sampai 2032. Capex Q3 $31.9B, **$3.4B di bawah konsensus**. Saham **turun 3.9% padahal beat semua metrik** | `asimetri_berkatalis` |
++
++**`compounding_rapuh` untuk Microsoft.** Itu panggilan yang keras, dan saya berdiri di belakangnya — di bawah lensa yang tidak boleh melihat katalis, yang tersisa adalah: margin tersempit dalam 4 tahun, FCF menurun, dan reinvestasi naik 61% yang seperdelapannya cuma bayar harga komponen yang lebih mahal. Mesin yang harus bayar makin mahal untuk output yang sama sedang melemah, sekuat apa pun permintaannya.
++
++Lensa quality **tidak boleh tahu** Azure +40%. Itu bukan kelalaian — itu batas lensanya (`CatalystSet` ❌, dan pertumbuhan segmen masuk lewat posisi kompetitif yang... ✅ untuk quality). **Ini lubang di peta akses saya** — lihat §5.
++
++**Kombinasi ini mengejutkan.** Kamu tidak bisa menebak `compounding_rapuh` dari `ruang_sempit`. Kamu tidak bisa menebak `asimetri_berkatalis` dari keduanya.
++
++---
++
++## 3. Temuan Utama: Divergensi ≠ Informasi
++
++Bandingkan:
++
++| | Multibagger | Quality | Speculative | Jumlah divergensi |
++|---|---|---|---|:---:|
++| **PG** | `ruang_tertutup` | `compounding_kuat` | `tanpa_asimetri` | **3** |
++| **MSFT** | `ruang_sempit` | `compounding_rapuh` | `asimetri_berkatalis` | **3** |
++| **INTC** | `ruang_terbuka` | `bukan_compounder` | `asimetri_berkatalis` | **3** |
++
++**Ketiganya punya skor divergensi identik.** Menurut D-08, ketiganya duduk sejajar di daftar Divergensi.
++
++Tapi lihat apa yang sebenarnya terjadi:
++
++> **PG:** kasih tahu saya `compounding_kuat` untuk consumer staples $400B. Saya bisa tebak dua lensa lainnya **dengan hampir pasti**. Tidak ada satu pun yang saya belum tahu.
++>
++> **MSFT:** kasih tahu saya `ruang_sempit`. Coba tebak lensa quality-nya. **Kamu akan bilang `compounding_kuat`.** Salah.
++
++Label yang berbeda **bukan** informasi. Yang informasi adalah **ketidakterdugaan**.
++
++PG menghasilkan tiga label berbeda yang **saling menentukan sepenuhnya**. Multi-lens tidak membelikan apa pun di PG — satu lensa cukup, dua sisanya bisa diturunkan.
++
++### Ini membatalkan metrik D-08
++
++D-08 aturan **L5**: *"Daftar Divergensi mengurut menurut jumlah & kedalaman divergensi."*
++
++**Jumlah divergensi adalah metrik yang salah.** PG akan naik ke puncak daftar Divergensi — tiga sumbu berbeda! — sambil tidak mengajarkan apa pun. Daftar yang seharusnya menunjukkan "di mana multi-lens membayar dirinya sendiri" justru akan dipenuhi saham paling membosankan di market, karena saham membosankan justru yang paling rapi menyapu ketiga sumbu.
++
++Saya membangun daftar itu kemarin dan yakin ia jawabannya. Ia mengukur benda yang salah.
++
++---
++
++## 4. Perbaikannya — dan Ia Bisa Dihitung
++
++Metrik yang benar: **seberapa tidak terduga kombinasi stance ini, dibanding populasi.**
++
++Dan ini bagian yang bagus — **kamu sudah punya populasinya.** Satu sesi menghasilkan ~2.000 `AggregatorOutput`. Dari situ, sebaran bersama stance bisa dihitung langsung, dalam sesi, tanpa data historis:
++
++```
++P(quality_stance | multibagger_stance)   ← dihitung dari ~2.000 kandidat sesi ini
++
++surprise(saham) = −log P(kombinasi stance saham ini | populasi sesi ini)
++```
++
++Contoh yang bakal keluar (ilustratif — angka asli butuh sesi penuh):
++
++| Kombinasi | Frekuensi populasi | Surprise |
++|---|---|---|
++| `ruang_tertutup` + `compounding_kuat` + `tanpa_asimetri` (PG) | sangat lumrah | **rendah** |
++| `ruang_sempit` + `compounding_rapuh` + `asimetri_berkatalis` (MSFT) | jarang | **tinggi** |
++| `ruang_terbuka` + `bukan_compounder` + `asimetri_berkatalis` (INTC) | jarang | **tinggi** |
++
++Daftar Divergensi diurutkan menurut **surprise**, bukan jumlah divergensi.
++
++Efek sampingnya bagus: metrik ini **menemukan sendiri** kombinasi mana yang lumrah, tanpa kamu perlu menetapkannya. Dan ia otomatis menyesuaikan tiap sesi — kalau seluruh market bergerak, yang "mengejutkan" ikut bergeser.
++
++### Bonus: T2 dapat definisi yang benar
++
++D-04 tes **T2** bilang: *"kalau >90% ticker punya stance sama di ketiga modul, curigai Multi-Lens."*
++
++Dengan kosakata terpisah (D-09), "stance sama" **tidak punya arti lagi** — ketiga kosakata tidak sebanding. T2 jadi tidak bisa dihitung sejak D-09 ditulis, dan saya tidak menyadarinya.
++
++Definisi penggantinya jatuh dari metrik yang sama:
++
++> **T2 (revisi):** kalau **mutual information** antar stance tiga lensa di seluruh populasi mendekati nol entropi bersyarat — artinya lensa B bisa ditebak dari lensa A — maka lensa B redundan. Multi-Lens tinggal klaim.
++
++Ini bisa dites tiap sesi, otomatis, dengan satu angka. **Dan inilah tes tesis inti v2 yang saya bilang butuh berbulan-bulan.** Ternyata bisa dihitung dari satu sesi penuh.
++
++---
++
++## 5. Lubang di Peta Akses Saya — Ditemukan oleh MSFT
++
++Lensa quality MSFT saya bilang `compounding_rapuh` tanpa melihat Azure +40%. Tapi cek peta akses draft: **bagian 3 (posisi kompetitif) = ✅ untuk quality.** Dan pertumbuhan segmen ada di bagian 3.
++
++Jadi lensa quality **seharusnya** melihat Azure +40%. Saya melanggar peta saya sendiri.
++
++Kalau dijalankan benar, quality melihat margin menyempit **dan** Azure +40%. Apakah stance-nya berubah jadi `compounding_kuat`? Mungkin. Dan kalau iya, PG dan MSFT jadi **sama** — dan temuan §3 saya runtuh.
++
++**Ini pertanyaan terbuka paling penting yang tersisa,** dan saya tidak bisa menjawabnya sendiri:
++
++> Bagian 3 (posisi kompetitif) memuat dua benda berbeda: **struktur** (model bisnis, konsentrasi revenue, moat) dan **momentum** (pertumbuhan segmen). Lensa quality butuh yang pertama. Yang kedua adalah bahan multibagger.
++>
++> **Bagian 3 harus dipecah?**
++
++Kalau ya, peta akses jadi lebih halus dari yang saya draft, dan Knowledge butuh bagian 3a/3b. Kalau tidak, lensa quality akan selalu tergoda momentum, dan `compounding_rapuh` untuk MSFT tidak akan pernah keluar.
++
++Saya condong ke "harus dipecah" — tapi saya baru saja salah menebak MSFT, jadi bobot pendapat saya di sini seharusnya kamu turunkan.
++
++---
++
++## 6. Yang Belum Dikerjakan
++
++**KO, JNJ, COST, AAPL** — belum. Saya butuh data Q2 2026 mereka yang belum saya tarik, dan menebak dari ingatan Januari akan menghasilkan analisa yang terlihat sama meyakinkannya tapi salah. Itu persis yang dilarang Prinsip #5.
++
++Empat saham itu tidak akan mengubah temuan §3 — PG dan MSFT sudah cukup untuk menunjukkan jumlah-divergensi mengukur benda yang salah. Mereka **akan** membantu menjawab §5.
++
++---
++
++## 7. Yang Berubah di Repo Kalau Kamu Setuju
++
++| Keputusan | Perubahan |
++|---|---|
++| **D-08 L5** | Urut menurut **surprise**, bukan jumlah divergensi |
++| **D-04 T2** | Definisi ulang: mutual information antar lensa, bukan "stance sama" (yang sudah tidak bisa dihitung sejak D-09) |
++| **D-07** | `Synthesis` butuh field `surprise` + `population_baseline` |
++| **Baru — D-12** | Pembatasan akses field per modul. **Ini yang menciptakan lensanya**; tanpa ini tidak ada tiga lensa |
++| **Terbuka** | Bagian 3 Knowledge dipecah struktur vs momentum? (§5) |
++
++---
++
++## 8. Bantah Saya
++
++1. **`compounding_rapuh` untuk MSFT.** Kalau menurutmu Azure +40% mengalahkan margin tersempit sejak 2022, kriteria quality kamu jauh berbeda dari saya — dan §5 jawabannya "jangan dipecah".
++2. **Bagian 3 dipecah struktur vs momentum.** Ini yang paling menentukan.
++3. **Surprise sebagai metrik.** Ia butuh populasi utuh sebelum daftar bisa dirender — memperberat barrier Fase B yang sudah berat.
++4. **PG benar-benar tidak informatif?** Mungkin "tiga lensa sepakat ini membosankan" itu sendiri berguna — sebagai penyaring, bukan sebagai temuan.
++
++---
++
++© AlphaForge v2 — draft kerja, bukan spec
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 25a7e99..620df32 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -4,6 +4,33 @@ Format: perubahan dicatat per revisi, mengacu ke entri `D-xx` di `00_Foundation/
+ 
+ ---
+ 
++## 2026-07-16 (lanjutan) — Kriteria Modul & Akses Field (D-12, D-13, D-14)
++
++Titik paling menentukan sejak proyek dimulai: kriteria tiga modul reasoning, yang sejak review pertama sengaja dibiarkan kosong menunggu bukti, sekarang punya draft komitmen pertama.
++
++### D-12 — Pembatasan akses field per modul
++Tiap modul reasoning cuma boleh membaca subset `KnowledgeProfile`, bukan keseluruhannya. **Ini bukan optimasi — ini yang menciptakan tiga lensa.** Tanpa pembatasan, ketiga modul membaca fakta identik dan cuma bisa berbeda soal bobot (D-09 jadi kosakata kosong tanpa isi berbeda di baliknya).
++
++### D-13 — Kriteria & tesis tiga modul
++- **Multibagger = trajectory** — bukan Gap (pasar belum tahu, nyaris mustahil dijadikan kriteria data) dan bukan Momentum murni (itu Speculative). Kurva yang sudah kelihatan, diteruskan 3–5 tahun, menghasilkan kelipatan; harga sekarang cuma mem-price tahun depan.
++- **Quality = kelanjutan** — mesin ini jalan, akan terus jalan atau tidak. Sengaja **tidak boleh membaca momentum (3b)** atau `CatalystSet`, supaya tidak tergoda menempel ke tesis Multibagger.
++- **Speculative = resolusi katalis** — butuh tanggal. Sengaja **tidak boleh membaca valuasi (6)** — asimetri tidak butuh harga masuk wajar untuk jadi asimetri.
++- **Bagian 3 Knowledge dipecah 3a (struktur) / 3b (momentum).** Trajectory butuh keduanya; kelanjutan cuma butuh yang pertama.
++- **Diuji ke 3 kasus nyata** (data Q1/Q3 FY2026): INTC → `bukan_compounder` + `asimetri_berkatalis` + `ruang_tak_terbaca` (revisi dari klaim awal `ruang_terbuka`). PG → `compounding_kuat` + `tanpa_asimetri` + `ruang_tertutup`. **MSFT → `compounding_rapuh`** (GM tersempit sejak 2022, capex naik 61% dengan sebagian cuma inflasi komponen) **dicapai tanpa pernah melihat Azure +40%** (3b) — bukti langsung D-12 menghasilkan kesimpulan berbeda dari kalau semua field dibuka.
++- Draft ini **punya dua penulis** dan wajib direvisi kalau pemilik produk merasa ada bagian yang salah — bukan dipertahankan karena sudah tertulis rapi.
++
++### D-14 — `surprise` menggantikan jumlah divergensi; T2 didefinisikan ulang
++Pembuktian D-13 membongkar metrik daftar Divergensi (D-08 L5): PG dan MSFT sama-sama 3 label berbeda — skor identik menurut "jumlah divergensi" — tapi PG bisa ditebak penuh dari satu lensa (tidak informatif), MSFT tidak bisa (sangat informatif). **Jumlah label berbeda bukan ukuran informasi.**
++
++Penggantinya: `surprise(ticker) = −log P(kombinasi stance | populasi sesi ini)`, dihitung dari seluruh populasi sesi. Efek samping: **T2 (D-04) yang sudah tidak bisa dihitung sejak D-09** (kosakata stance terpisah membuat "stance sama" kehilangan arti) sekarang didefinisikan ulang lewat mutual information antar lensa — bisa dihitung otomatis tiap sesi, tidak perlu menunggu Historical Tracking v2.1.
++
++### Konsekuensi teknis
++- Kontrak data → 3.0.0: `Synthesis.surprise`, `Synthesis.population_baseline`.
++- `KnowledgeProfile` → 3.0.0: bagian 3 pecah 3a/3b, tabel akses field per modul.
++- Barrier Fase B (D-03) diperberat satu langkah: `surprise` butuh populasi utuh, tidak bisa dihitung per-ticker.
++
++---
++
+ ## 2026-07-16 — Dashboard Lokal (D-06, D-07)
+ 
+ Rombakan lapisan tampilan. Pemicunya: transparansi — hasil keluar, tapi angka & alasan di baliknya tidak kelihatan.
+diff --git a/README.md b/README.md
+index ee8ca65..fb663db 100644
+--- a/README.md
++++ b/README.md
+@@ -21,7 +21,7 @@ v1 (`alphaforge-v1` / `alphaforge-core-v1`) tetap hidup sebagai referensi — ti
+ 
+ ## Status
+ 
+-**Spec:** 38 dokumen. Fondasi, arsitektur, dan Layer 1 lengkap. Di Layer 2, wadahnya sudah dikunci (kontrak data, aturan validasi) — **isi kriteria & bobot tiga modul reasoning belum**, dan itu keputusan terbuka terbesar yang tersisa.
++**Spec:** 41 dokumen. Fondasi, arsitektur, Layer 1, dan wadah Layer 2 lengkap. **Kriteria tiga modul reasoning kini punya draft komitmen pertama (D-13)** — trajectory untuk Multibagger, kelanjutan untuk Quality, resolusi katalis untuk Speculative — diuji ke 3 kasus nyata (INTC, PG, MSFT dari data Q1/Q3 FY2026). Ambang numerik dan cakupan populasi penuh belum diuji; ini draft kerja dua penulis, bukan keputusan final satu pihak.
+ 
+ **Kode:** ada di repo terpisah `alphaforge-core-v2`, mengikuti pola v1 (`alphaforge` untuk dokumentasi, `alphaforge-core` untuk kode). Implementasi awal Layer 1 (12/12) dan Layer 2 end-to-end sudah jalan dan tervalidasi dengan data live. Beberapa hal diketahui belum lengkap — lihat `PROGRESS_2026-07-14.md`.
+ 
+@@ -34,7 +34,8 @@ v1 (`alphaforge-v1` / `alphaforge-core-v1`) tetap hidup sebagai referensi — ti
+ 3. `01_ARCHITECTURE/01_SYSTEM_OVERVIEW.md` — gambaran alur end-to-end
+ 4. `01_ARCHITECTURE/04_DATA_CONTRACTS.md` — bentuk tiap paket data yang mengalir
+ 5. `01_ARCHITECTURE/05_DASHBOARD_LOCAL.md` — bagaimana semuanya ditampilkan
+-6. Lanjut ke spec detail sesuai layer yang ingin didalami
++6. `03_LAYER2_SPECS/07,08,09` — kriteria & akses field tiga modul reasoning (D-12, D-13)
++7. Lanjut ke spec detail sesuai layer yang ingin didalami
+ 
+ ## Konvensi Dokumen
+ 
+-- 
+2.43.0
+

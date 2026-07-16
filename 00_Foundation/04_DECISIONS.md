@@ -1,0 +1,171 @@
+# AlphaForge v2 — Catatan Keputusan (Decision Log)
+
+**Status:** Aktif
+**Doc version:** 1.0.0
+
+---
+
+## Kenapa Dokumen Ini Ada
+
+Prinsip #6 mensyaratkan sistem bisa diaudit ke belakang, termasuk mencatat versi metodologi. Tapi sampai revisi ini, spec sendiri tidak punya tempat untuk mencatat **kenapa** sebuah desain dipilih dan **apa yang ditolak**. Akibatnya keputusan lama tidak bisa dibedakan dari kebiasaan lama, dan siapa pun yang membacanya nanti (termasuk penulisnya sendiri) tidak tahu mana yang sudah dipertimbangkan matang dan mana yang cuma belum sempat dipikirkan.
+
+Setiap entri di bawah mencatat: keputusan, alasan, alternatif yang ditolak, dan biaya kalau nanti dibalik.
+
+Format ID: `D-<nomor>`. Entri tidak dihapus — kalau dibalik, statusnya diubah jadi `Dibatalkan oleh D-xx`, tidak dihilangkan.
+
+---
+
+## D-01 — Risk/Red-Flag Check hanya membaca Knowledge
+
+**Status:** Aktif
+**Menyentuh:** `03_LAYER2_SPECS/03_KNOWLEDGE.md`, `03_LAYER2_SPECS/04_RISK_REDFLAG_CHECK.md`
+
+### Masalah
+Dua dokumen saling bertentangan. `03_KNOWLEDGE.md` menutup dengan "Confidence, Peer, Risk — semua beroperasi di atas Knowledge, bukan Evidence mentah", sementara `04_RISK_REDFLAG_CHECK.md` menulis sumbernya "Diturunkan dari Knowledge & Evidence". Dua-duanya tidak bisa benar.
+
+Akar masalahnya bukan kalimatnya, tapi skemanya: Risk butuh tren shares outstanding (dilusi), pergantian auditor, restatement, dan litigasi — dan tidak satupun punya field di Knowledge. Jadi Risk *terpaksa* menjangkau Evidence.
+
+### Keputusan
+Risk hanya membaca Knowledge. Knowledge diberi **bagian 7 — Governance & Peristiwa Filing** yang menampung field-field yang selama ini dijangkau diam-diam dari Evidence.
+
+### Alasan
+- Invariant "satu arah, tiap tahap cuma menerima paket dari tahap sebelumnya" (`01_ARCHITECTURE/01_SYSTEM_OVERVIEW.md` §2) adalah salah satu klaim struktural utama v2. Melonggarkannya untuk menambal ketidaksinkronan dokumen berarti membayar prinsip dengan harga kesalahan tulis — terbalik.
+- Kalau Risk boleh nyelonong ke Evidence, tidak ada alasan prinsipil kenapa modul reasoning tidak boleh juga. Pengecualian pertama yang paling mahal.
+- Efek samping yang menguntungkan: begitu field governance ada di Knowledge, Confidence/Data Quality bisa mengukur kelengkapannya (Prinsip #5). Selama field itu cuma hidup di Evidence, Confidence buta terhadapnya.
+
+### Alternatif yang ditolak
+Longgarkan aturannya — akui Risk memang baca Evidence, ubah satu kalimat di `03_KNOWLEDGE.md`. Lebih murah (1 baris vs 1 bagian skema baru), tapi menggugurkan klaim arsitektur demi kenyamanan, dan membuat Confidence permanen buta terhadap sinyal governance.
+
+### Biaya kalau dibalik
+Rendah. Hapus bagian 7 dari Knowledge, kembalikan sumber Risk jadi "Knowledge & Evidence", longgarkan kalimat penutup `03_KNOWLEDGE.md`. Tidak ada komponen lain yang bergantung pada bagian 7 selain Risk dan Confidence.
+
+---
+
+## D-02 — Valuasi jadi bagian tersendiri di Knowledge
+
+**Status:** Aktif
+**Menyentuh:** `03_LAYER2_SPECS/03_KNOWLEDGE.md`
+
+### Masalah
+Tabel "fakta turunan vs penilaian" di `03_KNOWLEDGE.md` mencontohkan `"P/E 34, median peer group 19"` sebagai contoh sah level Knowledge — tapi skema 5 bagiannya tidak punya slot valuasi sama sekali. Padahal Multibagger dan Quality/Compound dua-duanya mustahil bereasoning tanpa valuasi.
+
+### Keputusan
+Tambah **bagian 6 — Valuasi** sebagai bagian tersendiri (bukan diperluas ke dalam bagian 2).
+
+### Alasan
+- Valuasi bukan kesehatan finansial. Bagian 2 menjawab "kondisi perusahaannya bagaimana"; valuasi menjawab "harganya berapa relatif terhadap kondisi itu". Perusahaan sehat bisa mahal, perusahaan sakit bisa murah — mencampurnya membuat dua pertanyaan berbeda terlihat seperti satu.
+- Bagian terpisah membuat Confidence bisa menandai "valuasi tidak bisa dihitung" (mis. perusahaan rugi, P/E tidak bermakna) tanpa mencemari skor kesehatan finansial.
+- Nomor 6 dipilih supaya aditif — bagian 1–5 tidak bergeser nomornya, referensi lama tidak putus.
+
+### Alternatif yang ditolak
+Perluas bagian 2 (Kesehatan Finansial). Lebih ringkas, tapi menggabung dua pertanyaan yang sengaja dipisah v2 dari v1.
+
+### Catatan penting
+Valuasi di Knowledge **hanya angka absolut per ticker** (P/E, P/S, EV/EBITDA, FCF yield). Angka relatif terhadap peer bukan di sini — lihat D-03.
+
+### Biaya kalau dibalik
+Rendah. Pindahkan field ke bagian 2, hapus bagian 6.
+
+---
+
+## D-03 — Knowledge tetap murni per-ticker; Peer jalan di fase kedua
+
+**Status:** Aktif
+**Menyentuh:** `03_LAYER2_SPECS/03_KNOWLEDGE.md`, `03_LAYER2_SPECS/06_PEER_RELATIVE_COMPARISON.md`, `01_ARCHITECTURE/01_SYSTEM_OVERVIEW.md`, `01_ARCHITECTURE/03_LAYER2_STOCK_ANALYSIS.md`
+
+### Masalah
+Dua hal sekaligus:
+
+1. **Melingkar.** Knowledge bagian 3 minta "pangsa revenue relatif terhadap total peer group" — jadi Knowledge butuh peer group. Tapi Peer/Relative Comparison beroperasi *di atas* Knowledge. A butuh B, B butuh A.
+2. **Diagram tidak jujur soal bentuk pipeline.** Diagram menggambar `Knowledge → [Confidence + Peer] → Risk` seolah alur per-ticker yang lurus. Padahal Peer butuh Knowledge **saham lain** sesektor — mustahil jalan streaming per ticker. Ada barrier di situ yang tidak pernah digambar.
+
+### Keputusan
+- Field "pangsa revenue relatif terhadap total peer group" **dihapus dari Knowledge**. Knowledge murni diturunkan dari Evidence ticker itu sendiri, tanpa pengetahuan apapun tentang ticker lain.
+- Pipeline Layer 2 diakui **dua fase** secara eksplisit, dengan barrier di antaranya:
+  - **Fase A (per-ticker, paralel):** Evidence → Knowledge
+  - **⟂ barrier:** tunggu Knowledge seluruh kandidat selesai
+  - **Fase B (butuh populasi):** Peer/Relative Comparison → Confidence → Risk → 3 modul → Aggregator
+- Semua angka relatif-peer hidup di output Peer, bukan di Knowledge.
+
+### Alasan
+- Menghapus satu field memutus lingkarannya sepenuhnya — tidak perlu akrobat urutan. Lingkaran itu ada *justru karena* satu field relatif nyelinap ke lapisan yang seharusnya absolut.
+- Barrier-nya nyata dan tidak bisa dihindari selama Peer memakai populasi hasil screening sendiri. Menggambarnya lebih jujur daripada pura-pura linear lalu kaget saat implementasi.
+- Sebagai bonus, batas Knowledge jadi jauh lebih tegas dan gampang dites: *Knowledge suatu ticker harus bisa dihitung dengan hanya Evidence ticker itu di tangan.* Itu satu baris test.
+
+### Alternatif yang ditolak
+- **Pindahkan Peer ke setelah Risk** — tidak menyelesaikan apa-apa; barrier-nya tetap ada, cuma pindah tempat.
+- **Biarkan Knowledge memanggil Peer** — merusak invariant satu arah, sama seperti D-01.
+
+### Biaya kalau dibalik
+Sedang. Kalau field pangsa revenue dikembalikan ke Knowledge, lingkaran D-03 hidup lagi dan butuh solusi lain (mis. dua-pass Knowledge).
+
+---
+
+## D-04 — Output tiga modul reasoning punya kontrak formal
+
+**Status:** Aktif
+**Menyentuh:** `01_ARCHITECTURE/04_DATA_CONTRACTS.md` (baru), `03_LAYER2_SPECS/07`, `08`, `09`, `11`
+
+### Masalah
+Aggregator ditugasi "menampilkan tiga hasil berdampingan tanpa mengubah kesimpulan masing-masing". Tapi bentuk "hasil" itu tidak pernah didefinisikan di manapun. Berdampingan apanya, kalau bentuknya belum ada.
+
+Turunannya: Prinsip #4 mewajibkan flag "direspons eksplisit", Prinsip #5 mewajibkan confidence menempel di tiap kesimpulan modul — dua kewajiban yang mengandaikan struktur output yang tidak pernah ditulis.
+
+### Keputusan
+Definisikan kontrak output modul di `01_ARCHITECTURE/04_DATA_CONTRACTS.md`, dengan dua aturan validasi yang **menolak output**, bukan sekadar mengharapkan:
+
+- `flag_responses[]` harus punya satu entri untuk **setiap** flag severity tinggi yang menempel di Knowledge. Jumlah tidak cocok → output ditolak.
+- `confidence` wajib ada dan wajib menyebutkan field `missing` yang membatasinya.
+
+### Alasan
+"Wajib direspons" tanpa mekanisme penolakan cuma harapan. Log progres 14 Juli sudah mencatat gejalanya sendiri: respons red-flag di tiga modul masih level umum. Prinsip yang tidak bisa gagal secara mekanis akan pelan-pelan jadi hiasan.
+
+### Alternatif yang ditolak
+Serahkan bentuk output ke fase implementasi. Itu yang sudah terjadi — dan hasilnya kode mendahului spec di bagian yang justru paling menentukan identitas v2.
+
+### Biaya kalau dibalik
+Tinggi. Aggregator, Confidence, dan Historical Tracking semuanya membaca kontrak ini.
+
+---
+
+## D-05 — Market Breadth dihitung atas universe sendiri, bukan S&P 500
+
+**Status:** Aktif
+**Menyentuh:** `02_LAYER1_SPECS/06_MARKET_BREADTH.md`, `04_DATA_SOURCES/01_PROVIDERS_OVERVIEW.md`
+
+### Masalah
+Spec Breadth minta "daftar konstituen index (S&P 500/NASDAQ)" dan log progres memperlakukannya seolah tinggal disuplai. Masalahnya daftar konstituen S&P 500 resmi itu berlisensi S&P Dow Jones Indices — yang gratis cuma scraping Wikipedia atau menebak dari holdings ETF. Jadi ini bukan "belum diberi input", ini sumber gratisnya memang tidak ada.
+
+### Keputusan
+Breadth dihitung atas **universe hasil Screening sendiri** (NASDAQ + NYSE dari listing files, setelah hard exclude).
+
+### Alasan
+- Datanya sudah ada dan sudah gratis. Tidak ada dependensi lisensi baru, tidak ada scraping baru.
+- Lebih selaras dengan v2. Seluruh alasan Layer 2 menyaring market-wide adalah karena watchlist manual v1 membatasi apa yang bisa terlihat. Mengukur "kesehatan market" lewat 500 saham terbesar, lalu menganalisa saham di luar 500 itu, artinya konteksnya diukur dari populasi yang berbeda dari yang dianalisa.
+- Ambang hard exclude Screening (market cap > $30jt, dollar volume > $300rb) sudah membuang shell dan ticker mati — persis noise yang bikin breadth mentah jadi tidak bermakna.
+
+### Konsekuensi yang diterima
+Angkanya **tidak bisa dibandingkan** dengan pembacaan breadth publik manapun ($ADD, % di atas MA200 versi S&P). Ini bukan bug — tapi harus dinyatakan di output supaya tidak salah dibaca sebagai indikator standar. Breadth atas ~2.000 saham hasil screening akan sistematis beda dari breadth atas 500 mega-cap, terutama saat rally sempit.
+
+### Alternatif yang ditolak
+- **Holdings ETF (SPY/QQQ)** — bisa, dipublikasikan issuer harian. Tapi menambah dependensi sumber baru untuk mendapat populasi yang justru kurang cocok dengan cakupan v2.
+- **Scraping Wikipedia** — standar ganda dengan penolakan scraping Investing.com di `09_MACRO_CALENDAR.md`.
+
+### Biaya kalau dibalik
+Rendah, kalau nanti ada anggaran lisensi. Ganti sumber universe; rumus advance/decline dan % di atas MA200 tidak berubah.
+
+---
+
+## Keputusan Terbuka (Belum Diputuskan)
+
+Dicatat di sini supaya tidak keliru dianggap sudah beres:
+
+- **Format output Confidence** — numerik 0–100, kategori diskrit, atau keduanya (`03_LAYER2_SPECS/05_CONFIDENCE_DATA_QUALITY.md`).
+- **Bobot & kriteria tiga modul reasoning** — bentuk output-nya sudah dikunci (D-04), isi reasoning-nya belum.
+- **Ambang kuantitatif red flag** — persentase dilusi, nilai insider selling, jangka waktu.
+- **TTL cache per jenis data** dan ukuran batch aman untuk `yfinance`.
+- **Budget waktu/call satu sesi penuh** — belum pernah dihitung. Lihat `04_DATA_SOURCES/05_RATE_LIMIT_CACHING_STRATEGY.md`.
+
+---
+
+© AlphaForge v2

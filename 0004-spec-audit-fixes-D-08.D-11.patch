@@ -1,0 +1,1322 @@
+From 4e81c75d16652728563f247fcb8b94d0181db6be Mon Sep 17 00:00:00 2001
+From: AlphaForge <a@b>
+Date: Thu, 16 Jul 2026 12:32:39 +0000
+Subject: [PATCH 4/6] spec: audit fixes D-08..D-11
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- D-08 masuk lewat lensa: 3 daftar + 1 divergensi, tidak pernah digabung.
+  Kunci: Prinsip #3 melarang MENGGABUNG lensa, bukan MENGURUTKAN di dalam satu lensa.
+- D-09 kosakata stance per modul. Enum bersama lama (compelling/interesting/weak)
+  adalah skala ordinal = hitungan suara. Kosakata terpisah -> operasinya tidak ada.
+- D-10 narasi = render deterministik dari field terstruktur. T1 dipecah T1a/T1b.
+  Efek samping: S2 (wajib sitasi) terpenuhi secara struktural, bukan diawasi.
+- D-11 CatalystSet (Fase A, bukan Knowledge — beda umur simpan) & ConfidenceReport
+  (Fase B). Aturan baru V6: confidence modul <= confidence data.
+- Dashboard 2.0.0: halaman daftar, confidence berwarna netral (§4b), stance tak diwarnai.
+- Mockup: tab Daftar, kosakata baru, plafon V6 terlihat, warna diperbaiki.
+
+Kontrak data -> 2.0.0
+---
+ 00_Foundation/03_GLOSSARY.md                  |  14 +-
+ 00_Foundation/04_DECISIONS.md                 | 184 +++++-
+ 01_ARCHITECTURE/04_DATA_CONTRACTS.md          |  94 ++-
+ 01_ARCHITECTURE/05_DASHBOARD_LOCAL.md         |  57 +-
+ 01_ARCHITECTURE/mockup/dashboard-mockup.html  | 614 ++++++++++++++++++
+ 03_LAYER2_SPECS/05_CONFIDENCE_DATA_QUALITY.md |  17 +
+ 03_LAYER2_SPECS/07_MODULE_MULTIBAGGER.md      |  15 +-
+ 03_LAYER2_SPECS/08_MODULE_QUALITY_COMPOUND.md |  15 +-
+ 03_LAYER2_SPECS/09_MODULE_SPECULATIVE.md      |  15 +-
+ 03_LAYER2_SPECS/10_CATALYST_TRACKING.md       |  20 +-
+ 10 files changed, 1025 insertions(+), 20 deletions(-)
+ create mode 100644 01_ARCHITECTURE/mockup/dashboard-mockup.html
+
+diff --git a/00_Foundation/03_GLOSSARY.md b/00_Foundation/03_GLOSSARY.md
+index 2311112..1005b58 100644
+--- a/00_Foundation/03_GLOSSARY.md
++++ b/00_Foundation/03_GLOSSARY.md
+@@ -1,7 +1,7 @@
+ # AlphaForge v2 — Glosarium
+ 
+ **Status:** Aktif — revisi: istilah dari kontrak data & keputusan D-01..D-05 ditambahkan
+-**Doc version:** 1.4.0
++**Doc version:** 1.5.0
+ 
+ Istilah-istilah kunci yang dipakai konsisten di seluruh dokumen AlphaForge v2. Disusun per kelompok: konsep fondasi, istilah Layer 1, istilah Layer 2.
+ 
+@@ -132,6 +132,18 @@ Lapisan tampilan untuk hasil kedua layer. Berjalan lokal tanpa server, membaca a
+ **Context Summary**
+ Kesimpulan kondisi market dari 12 komponen Layer 1 (Section 2 halaman Layer 1). **Dihasilkan Layer 1, bukan dashboard** — meringkas 12 pembacaan adalah sintesis, dan sintesis adalah reasoning: ia butuh `method_version`, confidence, dan jejak audit. Dilarang punya skor tunggal. Lihat D-06.
+ 
++**Masuk Lewat Lensa**
++Cara satu-satunya sampai ke halaman saham: tiga daftar terpisah (satu per modul), masing-masing diurutkan menurut kosakatanya sendiri, plus daftar Divergensi. Tidak pernah digabung. Dasarnya: **Prinsip #3 melarang MENGGABUNG lensa, bukan MENGURUTKAN di dalam satu lensa** — pembedaan yang selama ini tidak pernah dinyatakan. Lihat D-08.
++
++**Kosakata Stance**
++Tiap modul punya kosakata `stance` sendiri yang diturunkan dari pertanyaannya sendiri (`ruang_terbuka` vs `compounding_kuat` vs `asimetri_berkatalis`). Enum bersama yang lama (`compelling/interesting/weak`) adalah skala ordinal yang langsung berubah jadi hitungan suara. Kosakata terpisah membuat suara **tidak bisa dihitung karena operasinya tidak ada**. Pemetaan antar kosakata dilarang dibuat. Lihat D-09.
++
++**Catalyst Set**
++Katalis terjadwal per ticker, dihasilkan Fase A. **Bukan bagian Knowledge** — alasannya umur simpan: isi Knowledge meluruh serempak dari satu `evidence_snapshot_date`, katalis punya kedaluwarsa masing-masing. Lihat D-11.
++
++**Confidence Report vs Confidence Modul**
++`ConfidenceReport` (1 per ticker) mengukur kekuatan **data**. `ModuleOutput.confidence` (3 per ticker) mengukur keyakinan **modul pada kesimpulannya sendiri**. Aturan V6: yang kedua tidak boleh melebihi yang pertama. Sebaliknya boleh — data lengkap tidak mewajibkan kesimpulan kuat.
++
+ **Synthesis (Peta Konvergensi)**
+ Bagian yang memetakan di mana ketiga modul reasoning sepakat, di mana berbeda, dan **kenapa** berbeda (`root_cause`). Bukan verdict: verdict memampatkan tiga dimensi jadi satu lalu membuang sisanya; `synthesis` menunjuk balik ke tiga hasil dan tidak menggantikannya — daftar isi, bukan pengganti isi. Confidence-nya = terendah dari tiga modul, bukan rata-rata. Ditampilkan di bawah tiga kolom, tidak di atas. Uji pembedanya: kalau bisa dibaca sendirian dan terasa cukup, ia sudah jadi verdict. Lihat D-07.
+ 
+diff --git a/00_Foundation/04_DECISIONS.md b/00_Foundation/04_DECISIONS.md
+index 44a15dc..6284416 100644
+--- a/00_Foundation/04_DECISIONS.md
++++ b/00_Foundation/04_DECISIONS.md
+@@ -257,6 +257,188 @@ Uji pembeda: kalau `synthesis` bisa dibaca **tanpa** tiga kolom dan tetap terasa
+ Rendah. Hapus field `synthesis` dari `AggregatorOutput` dan section-nya dari dashboard — tiga kolom tetap berdiri sendiri, kembali ke (a).
+ 
+ ---
++## D-08 — Masuk lewat satu lensa, bukan lewat daftar gabungan
++
++**Status:** Aktif
++**Menyentuh:** `01_ARCHITECTURE/05_DASHBOARD_LOCAL.md`, `01_ARCHITECTURE/03_LAYER2_STOCK_ANALYSIS.md`
++
++### Masalah
++Lubang terbesar di seluruh v2, dan tidak tersentuh oleh spec lama maupun D-01..D-07.
++
++Pipeline menghasilkan 1.500–3.000 `AggregatorOutput`. Dashboard menampilkan satu saham. **Tidak pernah ada yang menjawab: bagaimana sampai ke halaman itu?** Tidak ada halaman daftar, tidak ada rute masuk.
++
++Dan begitu daftar dibuat, ia butuh urutan. Urutan butuh peringkat. Peringkat dilarang D-04 & D-07.
++
++Ini bukan kelalaian UI — ini **dua keputusan v2 yang saling bertabrakan**:
++
++| | Populasi | Verdict | Bisa dibaca? |
++|---|---|---|---|
++| v1 | watchlist kecil | satu skor | ya |
++| v2 | 8.000 saham | dilarang | **tidak** |
++
++v2 membalik keduanya sekaligus. Tidak ada yang bisa membaca 2.000 laporan tiga lensa.
++
++### Keputusan
++**Larangannya adalah pada MENGGABUNG, bukan pada MENGURUTKAN.** Itu pembedaan yang selama ini tidak pernah dinyatakan, dan begitu dinyatakan, jalan keluarnya terbuka.
++
++Prinsip #3 melarang tiga lensa dipadatkan jadi satu peringkat. Ia **tidak** melarang satu lensa mengurutkan menurut kriterianya sendiri — di dalam satu lensa, sumbu tunggal memang ada dan memang sah.
++
++Maka: **tidak ada satu daftar. Ada tiga daftar, dan satu daftar keempat.**
++
++```
++  MASUK LEWAT LENSA — pilih pertanyaanmu dulu, bukan sahamnya
++
++  ┌────────────────┬────────────────┬────────────────┐
++  │  Multibagger   │ Quality/Comp.  │  Speculative   │
++  │  ~2.000 saham  │  ~2.000 saham  │  ~2.000 saham  │
++  │  urut menurut  │  urut menurut  │  urut menurut  │
++  │  kriterianya   │  kriterianya   │  kriterianya   │
++  │  SENDIRI       │  SENDIRI       │  SENDIRI       │
++  └────────┬───────┴────────┬───────┴────────┬───────┘
++           └────────────────┼────────────────┘
++                            ▼
++              Halaman saham — TIGA lensa, termasuk
++              dua yang tadi tidak kamu pakai
++```
++
++**Daftar keempat — Divergensi.** Diurutkan menurut seberapa jauh ketiga lensa berselisih (dari `synthesis.divergences[]`). Ini bukan peringkat kualitas — ini peringkat **seberapa banyak yang bisa dipelajari**. Saham yang ketiganya sepakat tidak mengajarkan apa pun yang tidak bisa didapat dari satu lensa saja; saham yang ketiganya berselisih adalah satu-satunya tempat multi-lens benar-benar membayar dirinya sendiri.
++
++### Aturan
++| # | Aturan |
++|---|---|
++| L1 | **Tiga daftar tidak pernah digabung.** Tidak ada tampilan yang mencampur peringkat lintas lensa |
++| L2 | **Tidak ada kolom lensa lain di daftar lensa.** Daftar Multibagger tidak boleh menampilkan stance Quality — itu penggabungan lewat pintu samping |
++| L3 | **Pengurutan di dalam daftar memakai kosakata lensa itu sendiri** (D-09), jadi lintas daftar tidak ada operasi banding |
++| L4 | **Halaman saham selalu menampilkan ketiganya**, tak peduli lewat daftar mana masuknya |
++| L5 | Daftar Divergensi mengurut menurut jumlah & kedalaman divergensi, **tidak pernah** menurut stance |
++
++### Kenapa ini justru memperkuat Prinsip #3
++Awalnya terdengar seperti kompromi — "ya sudah, kasih peringkat saja, asal per lensa". Bukan.
++
++Masuk lewat satu lensa berarti kamu **menyatakan pertanyaanmu lebih dulu**. Lalu di halaman saham, kamu dipaksa berhadapan dengan dua lensa yang tidak kamu pilih. Itu urutan yang benar: kamu datang dengan pertanyaan, dan sistem menunjukkan bahwa ada dua pertanyaan lain yang tidak kamu tanyakan.
++
++Bandingkan dengan satu daftar berperingkat: kamu datang tanpa pertanyaan, sistem menyodorkan jawaban, dan tiga lensa jadi lampiran yang dibaca setelah keputusan sudah terbentuk. Itu v1 dengan langkah tambahan.
++
++### Alternatif yang ditolak
++- **Urut menurut confidence** — mengurutkan menurut kekuatan data, bukan menurut apa pun yang kamu tanyakan. Saham dengan data lengkap dan tesis membosankan akan selalu di atas.
++- **Satu daftar dengan tiga kolom stance** — inilah hitungan suara yang dilarang, cuma berbentuk tabel. Pembaca yang disuruh menjumlahkan.
++- **Skor gabungan berbobot** — v1, persis.
++
++### Biaya kalau dibalik
++Sedang. Struktur daftar melekat ke dashboard dan ke cara orang memakai sistem — kebiasaan lebih mahal dibalik daripada kode.
++
++---
++
++## D-09 — Kosakata stance berbeda per modul
++
++**Status:** Aktif
++**Menyentuh:** `01_ARCHITECTURE/04_DATA_CONTRACTS.md`, `03_LAYER2_SPECS/07`, `08`, `09`
++
++### Masalah
++D-04 mendefinisikan `stance : enum{compelling, interesting, weak, not_applicable}` — **identik untuk ketiga modul**. Itu kesalahan saya sendiri, dan cukup serius.
++
++Enum itu **ordinal**: compelling > interesting > weak. Dipakai identik oleh tiga modul, ia langsung jadi **hitungan suara**: "2 compelling, 1 weak". Verdict-nya tidak hilang — ia cuma pindah dari Aggregator ke kepala pembaca, dan justru jadi lebih sulit dilarang karena tidak ada field-nya.
++
++Lebih dalam lagi, ia melanggar Prinsip #3 di akarnya. Kalau tiga lensa mengajukan **pertanyaan yang berbeda**, jawabannya tidak boleh berada di sumbu yang sama. `not_applicable`-nya Speculative dan `weak`-nya Multibagger tidak sebanding — tapi enum bersama menyatakan mereka sebanding.
++
++### Keputusan
++Tiap modul punya kosakata sendiri, diturunkan dari pertanyaannya sendiri:
++
++| Modul | Pertanyaannya | Kosakata stance |
++|---|---|---|
++| **Multibagger** | Ada ruang untuk kelipatan besar? | `ruang_terbuka` · `ruang_sempit` · `ruang_tertutup` · `ruang_tak_terbaca` |
++| **Quality/Compound** | Ini mesin compounding? | `compounding_kuat` · `compounding_rapuh` · `bukan_compounder` · `mesin_tak_terbaca` |
++| **Speculative** | Ada asimetri berkatalis? | `asimetri_berkatalis` · `asimetri_tanpa_katalis` · `tanpa_asimetri` · `asimetri_tak_terbaca` |
++
++**Tidak ada tabel pemetaan antar kosakata. Membuatnya dilarang** — itu akan mengembalikan sumbu bersama lewat pintu belakang.
++
++### Kenapa ini bekerja
++Suaranya tidak bisa dihitung bukan karena dilarang, tapi karena **operasinya tidak ada**. "`ruang_sempit` + `compounding_kuat` + `tanpa_asimetri`" tidak menjumlah jadi apa pun. Pembaca terpaksa membaca ketiganya sebagai tiga jawaban atas tiga pertanyaan — yang memang begitu adanya.
++
++Di dalam satu kosakata, urutan tetap ada (`ruang_terbuka` > `ruang_sempit`), dan itu sah: satu lensa, satu sumbu. Itu yang membuat D-08 bisa mengurutkan daftar per lensa tanpa melanggar apa pun.
++
++### Catatan: tiap modul punya keadaan "tak terbaca" sendiri
++`not_applicable` yang lama merangkap dua hal: "modul ini tidak relevan untuk saham ini" dan "datanya tidak cukup untuk menjawab". Sekarang dipisah — keadaan `*_tak_terbaca` khusus untuk gap data, dan wajib menyebut `knowledge_gaps` penyebabnya (aturan V5 direvisi).
++
++### Biaya kalau dibalik
++Rendah di spec, sedang di kode kalau enum sudah tertanam.
++
++---
++
++## D-10 — Narasi dirender dari field terstruktur, bukan dikarang
++
++**Status:** Aktif
++**Menyentuh:** `01_ARCHITECTURE/04_DATA_CONTRACTS.md`, `01_ARCHITECTURE/05_DASHBOARD_LOCAL.md`
++
++### Masalah
++Dua hal yang saya tulis saling meniadakan:
++
++- **T1 (D-04):** output harus **identik byte-per-byte** tiap dijalankan ulang.
++- **Narasi (D-06):** "kalau LLM, `method_version` wajib mencakup versi model + prompt".
++
++LLM tidak deterministik. `method_version` tidak bisa menangkap itu. Kalau narasi ditulis LLM, T1 tidak akan pernah lulus — dan tes yang tidak akan pernah lulus akan dimatikan orang dalam seminggu, lalu seluruh jaminan determinisme ikut mati bersamanya.
++
++### Keputusan
++**Narasi = render deterministik dari field terstruktur.** Bukan dikarang bebas.
++
++Artinya urutannya dibalik: `agreements[]`, `divergences[]`, `root_cause`, `limiters` **dihitung dulu** oleh aturan. Prosanya template dari field-field itu.
++
++### Alasan
++Efek sampingnya justru yang paling berharga: **S2 (wajib sitasi) jadi terpenuhi secara struktural, bukan diawasi.** Narasi tidak bisa mengatakan apa pun yang tidak ada di field terstruktur — bukan karena dilarang, tapi karena tidak ada bahannya. Klaim tanpa sitasi jadi mustahil ditulis, bukan sekadar melanggar aturan.
++
++Ini menutup celah terbesar yang tersisa di D-07: `synthesis` yang dikarang LLM bisa menyelundupkan penilaian yang tidak dimiliki modul manapun, dan tidak akan ada yang tahu.
++
++### Harga yang dibayar
++Prosanya lebih kaku dari contoh di mockup. Narasi template terbaca seperti template. Itu diterima — narasi di sini alat audit, bukan tulisan.
++
++### T1 dipecah
++Karena narasi kini turunan, T1 bisa lebih tajam:
++
++- **T1a — determinisme struktural:** field terstruktur (`stance`, `flag_responses[].impact`, `context_used`, `root_cause`) harus identik tiap dijalankan ulang dengan input sama. **Gate keras.**
++- **T1b — independensi urutan:** acak urutan eksekusi tiga modul → T1a tetap lulus.
++- **Narasi tidak diuji terpisah** — kalau field-nya identik, narasinya identik dengan sendirinya.
++
++### Kalau modul reasoning sendiri berbasis LLM
++Maka T1a **tidak akan lulus**, dan itu keputusan yang harus diambil sadar — bukan ditemukan saat tes merah. Pilihannya: modul berbasis aturan (T1a jadi gate keras), atau modul berbasis LLM (T1a turun jadi pemantauan bertoleransi, dan `method_version` wajib memuat `model_version` + `prompt_version`).
++
++**Belum diputuskan.** Tercatat di Keputusan Terbuka — dan ini bergantung pada isi kriteria modul, yang juga belum ada.
++
++---
++
++## D-11 — Catalyst Tracking & Confidence/Data Quality akhirnya punya kontrak
++
++**Status:** Aktif
++**Menyentuh:** `01_ARCHITECTURE/04_DATA_CONTRACTS.md`, `03_LAYER2_SPECS/05`, `10`
++
++### Masalah
++D-04 mengunci kontrak untuk semua paket — **kecuali dua ini**, dan tidak ada yang menyadarinya sampai audit.
++
++- **Catalyst Tracking (#10)** ada di daftar file, ada di diagram, disebut Speculative. Tapi tidak ada di kontrak data, tidak ada di `AggregatorOutput`, tidak punya slot di Knowledge. Di mockup dashboard, Speculative menyatakan "tidak ada katalis dalam 90 hari" — **diambil dari field yang tidak ada.**
++- **Confidence/Data Quality (#5)** punya komponen, tapi output-nya tidak pernah didefinisikan. Yang ada cuma `confidence` inline di `ModuleOutput`. Jadi #5 komponen atau bukan?
++
++Ini persis kelas lubang yang ditemukan di review pertama (Knowledge tidak menopang konsumennya), diulangi oleh orang yang menemukannya.
++
++### Keputusan
++
++**Catalyst → `CatalystSet`, dihasilkan di Fase A, bukan bagian Knowledge.**
++
++Katalis bukan fakta tentang keadaan perusahaan — ia fakta tentang kalender. Alasan utamanya **umur simpan**: `KnowledgeProfile` adalah potret pada `evidence_snapshot_date` dan seluruh isinya meluruh dengan laju yang sama. Katalis punya tanggal kedaluwarsa masing-masing — earnings 19 Juli mati pada 20 Juli, sementara margin 42% tidak. Menaruhnya di Knowledge berarti satu paket berisi field dengan laju luruh yang berbeda, dan itu akan salah dibaca cepat atau lambat.
++
++**Confidence → `ConfidenceReport`, Fase B (butuh peer).**
++
++Sekalian menjernihkan hubungan yang selama ini kabur:
++
++- `ConfidenceReport` = seberapa kuat **data** saham ini. Satu per ticker.
++- `ModuleOutput.confidence` = seberapa yakin **modul ini** pada kesimpulannya sendiri.
++- **Aturan: `ModuleOutput.confidence.score` ≤ `ConfidenceReport.overall.score`.** Modul tidak boleh lebih yakin pada kesimpulannya daripada data yang menopangnya. Ini validasi baru: **V6**.
++
++Tanpa V6, modul bisa mengaku yakin 90 di atas profil yang cuma 60% lengkap, dan tidak ada yang menghentikannya.
++
++### Biaya kalau dibalik
++Rendah untuk `ConfidenceReport`. Sedang untuk `CatalystSet` kalau sudah ada entri historis.
++
++---
++
+ 
+ ## Keputusan Terbuka (Belum Diputuskan)
+ 
+@@ -268,7 +450,7 @@ Dicatat di sini supaya tidak keliru dianggap sudah beres:
+ - **TTL cache per jenis data** dan ukuran batch aman untuk `yfinance`.
+ - **Budget waktu/call satu sesi penuh** — belum pernah dihitung. Lihat `04_DATA_SOURCES/05_RATE_LIMIT_CACHING_STRATEGY.md`.
+ - **Spec `context_summary`** — kriteria & ambang. Bentuknya mengikuti pola D-07: memetakan di mana 12 komponen searah dan di mana bertentangan, bukan skor market.
+-- **Siapa penulis narasi** — kalau LLM, `method_version`-nya wajib mencakup versi model + prompt.
++- **Modul reasoning: berbasis aturan atau LLM?** (D-10) Menentukan apakah T1a jadi gate keras atau pemantauan bertoleransi. Bergantung pada isi kriteria modul, yang belum ada.
+ 
+ ---
+ 
+diff --git a/01_ARCHITECTURE/04_DATA_CONTRACTS.md b/01_ARCHITECTURE/04_DATA_CONTRACTS.md
+index 725feec..f00cb91 100644
+--- a/01_ARCHITECTURE/04_DATA_CONTRACTS.md
++++ b/01_ARCHITECTURE/04_DATA_CONTRACTS.md
+@@ -1,7 +1,7 @@
+ # Kontrak Data (Data Contracts)
+ 
+ **Status:** Aktif
+-**Doc version:** 1.2.0
++**Doc version:** 2.0.0
+ 
+ ---
+ 
+@@ -62,7 +62,7 @@ ComponentReading {
+ }
+ ```
+ 
+-`narrative` dihasilkan **pipeline**, bukan dashboard saat render (D-06). Narasi yang lahir saat render tidak berversi, tidak tersimpan, dan bisa berbeda tiap kali halaman dibuka untuk data yang sama — itu reasoning yang bersembunyi di lapisan tampilan.
++`narrative` dihasilkan **pipeline**, bukan dashboard saat render (D-06). Dan ia **render deterministik dari field terstruktur, bukan karangan bebas** (D-10) — field dihitung dulu oleh aturan, prosanya template dari field itu. Konsekuensinya: narasi secara struktural tidak bisa mengatakan apa pun yang tidak ada di data. Klaim tanpa sitasi jadi mustahil ditulis, bukan sekadar melanggar aturan.
+ 
+ ### Catatan: kenapa `kind` wajib
+ 
+@@ -131,6 +131,66 @@ PeerComparisonResult {
+ 
+ ---
+ 
++## 5b. Catalyst Set (D-11)
++
++Dihasilkan **Fase A**, per-ticker, diturunkan dari Evidence (kalender earnings, filing, berita).
++
++```
++CatalystSet {
++  ticker                : string
++  method_version        : semver
++  catalysts             : [{
++                            catalyst_id : string,
++                            kind        : enum{earnings, product, regulatory, filing, other},
++                            expected_at : date | {from, to},      # rentang kalau tak pasti
++                            certainty   : enum{scheduled, expected, rumored},
++                            expires_at  : date,                   # kapan ia berhenti relevan
++                            source      : {provider, fetched_at}
++                          }]
++  horizon_days          : int                # jendela yang dipindai
++  status                : enum{ok, degraded, missing}
++}
++```
++
++### Kenapa bukan bagian Knowledge
++
++Katalis bukan fakta tentang keadaan perusahaan — ia fakta tentang kalender. Alasan pokoknya **umur simpan**: `KnowledgeProfile` adalah potret pada `evidence_snapshot_date` dan seluruh isinya meluruh dengan laju yang sama. Katalis punya kedaluwarsa masing-masing — earnings 19 Juli mati pada 20 Juli, margin 42% tidak.
++
++Menaruh keduanya di satu paket berarti field dengan laju luruh berbeda duduk berdampingan tanpa penanda, dan itu akan salah dibaca cepat atau lambat. `expires_at` yang eksplisit ada supaya dashboard bisa menandai katalis yang sudah lewat, bukan menampilkannya seolah masih menunggu.
++
++Konsumen utama: Speculative Module. Konsumen sekunder: Multibagger (katalis bisa membuka ruang naik).
++
++## 5c. Confidence Report (D-11)
++
++Dihasilkan **Fase B** (butuh peer), satu per ticker.
++
++```
++ConfidenceReport {
++  ticker                : string
++  method_version        : semver
++  overall               : {score: 0-100, band: enum{low,medium,high}, limiters: [string]}
++  by_section            : map<knowledge_section, {filled, expected, score}>
++  peer_penalty          : {applied: bool, reason: string | null}   # low_sample_size / peer_failures
++  context_penalty       : {applied: bool, components_degraded: [string]}
++  evidence_age_days     : int
++}
++```
++
++### Hubungannya dengan `ModuleOutput.confidence`
++
++Ini yang selama ini kabur, dan sekarang tegas:
++
++| | Mengukur | Jumlah |
++|---|---|---|
++| `ConfidenceReport` | seberapa kuat **data** saham ini | 1 per ticker |
++| `ModuleOutput.confidence` | seberapa yakin **modul ini** pada kesimpulannya sendiri | 3 per ticker |
++
++**Aturan V6: `ModuleOutput.confidence.score` ≤ `ConfidenceReport.overall.score`.**
++
++Modul tidak boleh lebih yakin pada kesimpulannya daripada data yang menopangnya. Tanpa V6, modul bisa mengaku yakin 90 di atas profil yang 60% lengkap dan tidak ada yang menghentikannya.
++
++Kebalikannya tetap sah dan penting: modul **boleh** jauh kurang yakin dari data yang tersedia. Data lengkap tidak mewajibkan kesimpulan kuat — sering justru sebaliknya.
++
+ ## 6. Module Output — Kontrak Inti (D-04)
+ 
+ Berlaku identik untuk ketiga modul. **Bentuknya sama, isinya bebas** — itu justru yang membuat Multi-Lens bisa dibandingkan tanpa disamakan.
+@@ -141,7 +201,7 @@ ModuleOutput {
+   ticker                : string
+   method_version        : semver
+ 
+-  stance                : enum{compelling, interesting, weak, not_applicable}
++  stance                : <kosakata milik modul ini — lihat tabel di bawah, D-09>
+   stance_rationale      : string              # kenapa stance itu, bahasa manusia
+ 
+   confidence            : {
+@@ -166,6 +226,22 @@ ModuleOutput {
+ }
+ ```
+ 
++### Kosakata `stance` — Berbeda Per Modul (D-09)
++
++| Modul | Pertanyaannya | Kosakata |
++|---|---|---|
++| `multibagger` | Ada ruang untuk kelipatan besar? | `ruang_terbuka` · `ruang_sempit` · `ruang_tertutup` · `ruang_tak_terbaca` |
++| `quality_compound` | Ini mesin compounding? | `compounding_kuat` · `compounding_rapuh` · `bukan_compounder` · `mesin_tak_terbaca` |
++| `speculative` | Ada asimetri berkatalis? | `asimetri_berkatalis` · `asimetri_tanpa_katalis` · `tanpa_asimetri` · `asimetri_tak_terbaca` |
++
++Versi sebelumnya memakai satu enum bersama (`compelling/interesting/weak/not_applicable`). Itu **skala ordinal yang dipakai identik oleh tiga modul** — artinya hitungan suara: "2 compelling, 1 weak". Verdict-nya tidak hilang, cuma pindah ke kepala pembaca, dan jadi lebih sulit dilarang karena tidak punya field.
++
++Kosakata terpisah membuat suaranya **tidak bisa dihitung karena operasinya tidak ada**. `ruang_sempit + compounding_kuat + tanpa_asimetri` tidak menjumlah jadi apa pun. Pembaca terpaksa membacanya sebagai tiga jawaban atas tiga pertanyaan — yang memang begitu adanya.
++
++**Tabel pemetaan antar kosakata dilarang dibuat.** Itu akan mengembalikan sumbu bersama lewat pintu belakang.
++
++Di dalam satu kosakata urutan tetap ada (`ruang_terbuka` > `ruang_sempit`) dan itu sah — satu lensa, satu sumbu. Itulah yang membuat daftar per lensa di D-08 bisa diurutkan tanpa melanggar apa pun.
++
+ ### Aturan Validasi — Output Ditolak Kalau Gagal
+ 
+ Ini bagian yang membuat Prinsip #4 dan #5 punya gigi. Bukan harapan — syarat.
+@@ -176,7 +252,8 @@ Ini bagian yang membuat Prinsip #4 dan #5 punya gigi. Bukan harapan — syarat.
+ | V2 | `flag_responses[].rationale` harus menyebut flag itu secara spesifik, bukan kalimat umum yang sama untuk semua flag. Rationale identik di ≥2 flag berbeda → **ditandai `generic_response`** untuk direview. | #4 |
+ | V3 | Kalau `confidence.band != high`, `limiters` tidak boleh kosong. | #5 |
+ | V4 | Kalau ada field Knowledge berstatus `missing` yang masuk kriteria modul ini, ia harus muncul di `knowledge_gaps`. | #5 |
+-| V5 | `stance = not_applicable` wajib punya `stance_rationale` — modul tidak boleh diam-diam mangkir dari saham yang sulit. | #3 |
++| V5 | Keadaan `*_tak_terbaca` wajib menyebut `knowledge_gaps` penyebabnya — modul tidak boleh diam-diam mangkir dari saham yang sulit. | #3 |
++| V6 | `confidence.score` ≤ `ConfidenceReport.overall.score`. Modul tidak boleh lebih yakin pada kesimpulannya daripada data yang menopangnya. | #5 |
+ 
+ > **Catatan V2:** log progres 14 Juli sudah mencatat gejalanya duluan — "respons red-flag di 3 modul masih level umum (moderate/elevated), belum spesifik per jenis flag". V1 memaksa modul menjawab; V2 memaksa jawabannya berbeda-beda. Tanpa V2, V1 gampang dipenuhi dengan menyalin kalimat yang sama tiga kali.
+ 
+@@ -184,7 +261,11 @@ Ini bagian yang membuat Prinsip #4 dan #5 punya gigi. Bukan harapan — syarat.
+ 
+ Prinsip #3 sudah mendefinisikan "independen" secara teknis, tapi belum pernah menyatakan cara mengeceknya. Dua tes yang bisa dijalankan langsung:
+ 
+-- **T1 — Urutan tidak berpengaruh.** Jalankan ketiga modul dengan input identik dalam urutan acak, berkali-kali. Semua `ModuleOutput` harus identik byte-per-byte tiap kali. Kalau tidak, ada state yang bocor antar modul.
++- **T1a — Determinisme struktural.** Input sama → field terstruktur (`stance`, `flag_responses[].impact`, `context_used`, `root_cause`) identik tiap kali. **Gate keras.**
++- **T1b — Independensi urutan.** Acak urutan eksekusi tiga modul → T1a tetap lulus. Kalau tidak, ada state yang bocor antar modul.
++- **Narasi tidak diuji terpisah** — ia render deterministik dari field terstruktur (D-10), jadi kalau field-nya identik, narasinya identik dengan sendirinya.
++
++> Kalau modul reasoning sendiri berbasis LLM, T1a tidak akan lulus. Itu keputusan yang harus diambil sadar, bukan ditemukan saat tes merah — lihat D-10 dan Keputusan Terbuka.
+ - **T2 — Konvergensi mencurigakan.** Di satu batch analisa, kalau ketiga modul menghasilkan `stance` yang sama untuk >90% ticker, Multi-Lens-nya patut dicurigai jadi klaim di atas kertas. Ini bukan kegagalan otomatis — bisa saja market-nya memang seragam — tapi wajib memicu review, bukan lewat diam-diam.
+ 
+ ---
+@@ -200,8 +281,9 @@ AggregatorOutput {
+ 
+   module_outputs        : [ModuleOutput]             # selalu 3, urutan lihat di bawah
+   synthesis             : Synthesis                  # D-07
++  catalysts             : CatalystSet                # D-11
++  confidence_report     : ConfidenceReport           # D-11
+   risk_flags            : [Flag]                     # eksplisit, bukan disembunyikan
+-  confidence_overall    : {score, band, limiters}
+ 
+   halted                : bool                       # true kalau berhenti di severity ekstrem
+   halt_reason           : string | null
+diff --git a/01_ARCHITECTURE/05_DASHBOARD_LOCAL.md b/01_ARCHITECTURE/05_DASHBOARD_LOCAL.md
+index 3e898d4..ea27f58 100644
+--- a/01_ARCHITECTURE/05_DASHBOARD_LOCAL.md
++++ b/01_ARCHITECTURE/05_DASHBOARD_LOCAL.md
+@@ -1,7 +1,7 @@
+ # Dashboard Lokal
+ 
+ **Status:** Aktif
+-**Doc version:** 1.1.0
++**Doc version:** 2.0.0
+ 
+ ---
+ 
+@@ -96,6 +96,41 @@ Section 2 wajib menampilkan **berapa komponen yang degraded/missing** secara men
+ 
+ ---
+ 
++## 3b. Halaman Daftar — Masuk Lewat Lensa (D-08)
++
++Sampai revisi ini dashboard tidak punya rute masuk. Ia menampilkan satu saham, sementara pipeline menghasilkan 1.500–3.000. Tidak pernah ada yang menjawab bagaimana sampai ke halaman itu.
++
++**Tidak ada satu daftar. Ada tiga, plus satu.**
++
++```
++  ┌────────────────┬────────────────┬────────────────┬──────────────┐
++  │  Multibagger   │ Quality/Comp.  │  Speculative   │  Divergensi  │
++  │  urut menurut  │  urut menurut  │  urut menurut  │  urut menurut│
++  │  kosakatanya   │  kosakatanya   │  kosakatanya   │  selisih     │
++  │  sendiri       │  sendiri       │  sendiri       │  antar lensa │
++  └────────┬───────┴────────┬───────┴────────┬───────┴──────┬───────┘
++           └────────────────┴────────┬───────┴──────────────┘
++                                     ▼
++                   Halaman saham — TIGA lensa, termasuk
++                   dua yang tadi tidak kamu pakai
++```
++
++Kamu memilih **pertanyaanmu** dulu, bukan sahamnya. Lalu di halaman saham kamu berhadapan dengan dua lensa yang tidak kamu pilih. Itu urutan yang benar: datang dengan pertanyaan, lalu diperlihatkan bahwa ada dua pertanyaan lain yang tidak kamu tanyakan.
++
++Bandingkan dengan satu daftar berperingkat: kamu datang tanpa pertanyaan, sistem menyodorkan jawaban, dan tiga lensa jadi lampiran yang dibaca setelah keputusan sudah terbentuk. Itu v1 dengan langkah tambahan.
++
++| # | Aturan mengikat |
++|---|---|
++| L1 | Tiga daftar **tidak pernah digabung** — tidak ada tampilan yang mencampur peringkat lintas lensa |
++| L2 | **Tidak ada kolom lensa lain** di daftar lensa. Daftar Multibagger tidak boleh menampilkan stance Quality — itu penggabungan lewat pintu samping |
++| L3 | Pengurutan memakai kosakata lensa itu sendiri (D-09), jadi lintas daftar tidak ada operasi banding |
++| L4 | Halaman saham **selalu** menampilkan ketiganya, lewat daftar mana pun masuknya |
++| L5 | Daftar Divergensi mengurut menurut jumlah & kedalaman divergensi, **tidak pernah** menurut stance |
++
++**Daftar Divergensi** diurutkan dari `synthesis.divergences[]`. Ini bukan peringkat kualitas — ini peringkat **seberapa banyak yang bisa dipelajari**. Saham yang ketiganya sepakat tidak mengajarkan apa pun yang tidak bisa didapat dari satu lensa; saham yang ketiganya berselisih adalah satu-satunya tempat multi-lens membayar dirinya sendiri.
++
++Tiap baris daftar menampilkan: ticker, stance lensa itu, confidence, jumlah flag. **Tidak lebih.** Baris daftar bukan tempat meringkas — ia tempat memutuskan mau klik atau tidak.
++
+ ## 4. Halaman Layer 2 — Analisa Saham
+ 
+ Sumber: `AggregatorOutput` (`04_DATA_CONTRACTS.md` §7) + `KnowledgeProfile` yang dirujuknya.
+@@ -133,8 +168,8 @@ Tiap modul menampilkan seluruh isi `ModuleOutput`-nya:
+ 
+ | Elemen | Kenapa wajib tampil |
+ |---|---|
+-| `stance` + `stance_rationale` | Kesimpulan modul ini, beserta alasannya |
+-| `confidence.score` + `band` + **`limiters`** | Limiters yang bikin skor confidence bermakna. Angka tanpa limiter cuma dekorasi |
++| `stance` + `stance_rationale` | Kesimpulan modul ini, dalam **kosakatanya sendiri** (D-09) — tidak sebanding dengan modul lain, dan memang tidak boleh dibandingkan |
++| `confidence.score` + `band` + **`limiters`** | Limiters yang bikin skor confidence bermakna. Angka tanpa limiter cuma dekorasi. **Warnanya wajib netral** — lihat §4b |
+ | `flag_responses[]` | **Bukti Prinsip #4 dipatuhi.** Tiap red flag + bagaimana modul ini meresponsnya |
+ | `context_used[]` | **Ini jawaban langsung untuk "komponen mana yang benar-benar ngaruh"** — komponen Layer 1 mana yang mempengaruhi stance, dan bagaimana |
+ | `knowledge_gaps[]` | Field kosong yang membatasi kesimpulan ini |
+@@ -168,6 +203,16 @@ Tiap sitasi bisa diklik ke field asalnya di Section 1 atau ke kolom modul di ata
+ 
+ > **Uji pembeda, dipakai saat review tampilan:** kalau bagian ini bisa dibaca tanpa tiga kolom di atasnya dan tetap terasa cukup, ia sudah berubah jadi verdict dan D-07 perlu diperketat. `synthesis` yang benar justru **tidak berguna** sendirian — ia menunjuk ke atas.
+ 
++### 4b. Confidence Tidak Boleh Diwarnai Seperti Kualitas
++
++Aturan yang lahir dari kesalahan di mockup pertama: confidence 78 diberi bar cyan, confidence 54 diberi bar ochre. Cyan terbaca positif, ochre terbaca peringatan — sekali lihat, modul dengan confidence tertinggi terbaca sebagai pemenang.
++
++Padahal **confidence mengukur kekuatan data, bukan daya tarik**. Modul bisa sangat yakin bahwa sesuatu itu buruk: `bukan_compounder` dengan confidence 88 adalah kesimpulan kuat, bukan kesimpulan bagus.
++
++**Aturan:** bar dan angka confidence memakai **satu warna netral** di ketiga modul, tanpa gradasi semantik. Warna dipakai untuk `kind` (direct/derived), status (missing/degraded), dan flag — tidak untuk confidence, dan tidak untuk stance.
++
++Stance juga tidak boleh diwarnai menurut "bagusnya", karena kosakata tiga modul tidak sebanding (D-09) — mewarnai `ruang_terbuka` hijau dan `ruang_tertutup` merah akan mengembalikan sumbu bersama lewat warna.
++
+ ## 5. Yang Perlu Ditambahkan ke Pipeline
+ 
+ Dashboard ini butuh tiga hal yang **belum ada** di kontrak data. Semuanya dihasilkan pipeline, bukan dashboard (prinsip 2.1 & 2.2):
+@@ -178,15 +223,17 @@ Dashboard ini butuh tiga hal yang **belum ada** di kontrak data. Semuanya dihasi
+ | `MarketContextPackage.context_summary` | Layer 1, per sesi | Kesimpulan Section 2 halaman Layer 1. `kind=derived`, punya `method_version` + confidence. Lihat D-06 |
+ | `ModuleOutput.stance_rationale` | Layer 2, per modul | Sudah ada di kontrak D-04 — pastikan terisi, bukan opsional |
+ | `AggregatorOutput.synthesis` | Layer 2, per saham | Peta konvergensi/divergensi (D-07). `kind` sintesis — punya `method_version` & confidence |
++| `AggregatorOutput.catalysts` | Fase A, per ticker | `CatalystSet` (D-11) — sebelumnya dirujuk Speculative tanpa punya field di mana pun |
++| `AggregatorOutput.confidence_report` | Fase B, per ticker | `ConfidenceReport` (D-11) — output komponen #5 yang selama ini tak pernah didefinisikan |
+ 
+-Perubahan ini menaikkan `04_DATA_CONTRACTS.md` ke versi 1.2.0.
++Perubahan ini menaikkan `04_DATA_CONTRACTS.md` ke versi 2.0.0.
+ 
+ ---
+ 
+ ## 6. Yang Masih Perlu Diputuskan
+ 
+ - **D-06** — spec `context_summary`: kriteria, ambang, apa yang membuatnya "degraded".
+-- **Siapa yang menulis narasi.** Kalau LLM, ia butuh `method_version` yang mencakup versi model + prompt — kalau tidak, narasi lama tidak bisa direproduksi dan Prinsip #6 bocor lewat pintu ini.
++- **Modul reasoning: berbasis aturan atau LLM?** (D-10) Narasi sudah diputuskan deterministik — dirender dari field terstruktur, bukan dikarang. Tapi kalau modulnya sendiri LLM, T1a tetap tidak lulus. Bergantung pada isi kriteria modul, yang belum ada.
+ - **Riwayat sesi.** Dashboard menampilkan sesi terakhir saja, atau bisa telusuri sesi lama dari Historical Tracking? Yang kedua jauh lebih berguna untuk mengevaluasi reasoning, tapi butuh format penyimpanan yang sudah stabil.
+ - **Teknologi.** Static HTML dari template, atau app lokal. Belum diputuskan — tapi apa pun pilihannya, prinsip 2.1 mengikat.
+ 
+diff --git a/01_ARCHITECTURE/mockup/dashboard-mockup.html b/01_ARCHITECTURE/mockup/dashboard-mockup.html
+new file mode 100644
+index 0000000..731fc16
+--- /dev/null
++++ b/01_ARCHITECTURE/mockup/dashboard-mockup.html
+@@ -0,0 +1,614 @@
++<!DOCTYPE html>
++<html lang="id">
++<head>
++<meta charset="utf-8">
++<meta name="viewport" content="width=device-width, initial-scale=1">
++<title>AlphaForge v2 — Dashboard Lokal (mockup)</title>
++<style>
++:root{
++  --ink:#0F151B; --panel:#161F29; --panel2:#1B2632; --rule:#293745;
++  --text:#C7D2DB; --dim:#8194A3; --faint:#5C6E7C;
++  --direct:#5FB3C9;      /* terukur */
++  --derived:#D4A24C;     /* dikonstruksi */
++  --missing:#A8628A;     /* tidak ada */
++  --flag:#C4574F;
++  --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Roboto Mono", Menlo, monospace;
++  --serif: "Iowan Old Style", Georgia, "Times New Roman", serif;
++  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
++}
++*{box-sizing:border-box;margin:0;padding:0}
++body{background:var(--ink);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
++.wrap{max-width:1180px;margin:0 auto;padding:0 20px 80px}
++
++/* ---------- topbar ---------- */
++.top{border-bottom:1px solid var(--rule);position:sticky;top:0;background:rgba(15,21,27,.94);backdrop-filter:blur(8px);z-index:10}
++.top-in{max-width:1180px;margin:0 auto;padding:14px 20px;display:flex;align-items:baseline;gap:20px;flex-wrap:wrap}
++.brand{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
++.brand b{color:var(--text);font-weight:600}
++.tabs{display:flex;gap:2px;margin-left:auto}
++.tab{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:7px 14px;border:1px solid var(--rule);background:transparent;color:var(--faint);cursor:pointer}
++.tab[aria-selected="true"]{color:var(--ink);background:var(--text);border-color:var(--text)}
++.tab:focus-visible{outline:2px solid var(--direct);outline-offset:2px}
++
++/* ---------- section chrome ---------- */
++.sec{margin-top:44px}
++.sec-head{display:flex;align-items:baseline;gap:14px;border-bottom:1px solid var(--rule);padding-bottom:8px;margin-bottom:22px}
++.sec-n{font-family:var(--mono);font-size:11px;color:var(--faint);letter-spacing:.1em}
++.sec-t{font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--text)}
++.sec-note{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--dim)}
++
++/* ---------- meta bar ---------- */
++.meta{display:flex;gap:26px;flex-wrap:wrap;padding:16px 0 0;font-family:var(--mono);font-size:11px}
++.meta div span{display:block;color:var(--faint);letter-spacing:.08em;text-transform:uppercase;font-size:10px;margin-bottom:3px}
++.meta div b{font-weight:500;color:var(--text)}
++.warn b{color:var(--derived)}
++
++/* ---------- kartu komponen ---------- */
++.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:12px}
++.card{background:var(--panel);border:1px solid var(--rule);display:flex;flex-direction:column}
++.card-top{display:flex;align-items:flex-start;gap:10px;padding:12px 14px 0}
++.card-name{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);flex:1}
++/* badge kind — sengaja keras & tak bisa dilewatkan (spec §3, Prinsip #5) */
++.kind{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.12em;padding:3px 6px;border:1px solid}
++.kind.d{color:var(--direct);border-color:var(--direct)}
++.kind.v{color:var(--derived);border-color:var(--derived);background:rgba(212,162,76,.08)}
++.val{font-family:var(--mono);font-size:26px;font-weight:500;padding:6px 14px 2px;letter-spacing:-.02em}
++.val small{font-size:12px;color:var(--dim);font-weight:400}
++.narr{font-family:var(--serif);font-size:13.5px;line-height:1.5;color:var(--text);padding:6px 14px 12px;opacity:.92}
++/* rakitan: hanya ada di kartu DERIVED — anatomi kartu sendiri yang membedakan */
++.built{margin:0 14px 12px;padding:8px 10px;border-left:2px solid var(--derived);background:rgba(212,162,76,.05);font-family:var(--mono);font-size:10px;color:var(--dim);line-height:1.7}
++.built em{color:var(--derived);font-style:normal;letter-spacing:.08em}
++/* strip provenance — signature: selalu ada, tak pernah dilipat */
++.prov{margin-top:auto;border-top:1px solid var(--rule);padding:8px 14px;font-family:var(--mono);font-size:9.5px;color:var(--faint);display:flex;gap:10px;flex-wrap:wrap;letter-spacing:.04em}
++.prov b{color:var(--dim);font-weight:400}
++.card.deg{border-color:rgba(212,162,76,.5)}
++.card.mis{border-color:rgba(168,98,138,.5);background:repeating-linear-gradient(135deg,var(--panel),var(--panel) 9px,rgba(168,98,138,.05) 9px,rgba(168,98,138,.05) 18px)}
++.card.mis .val{color:var(--missing);font-size:15px;padding-top:12px}
++.stat{font-family:var(--mono);font-size:9px;letter-spacing:.1em;padding:3px 6px}
++.stat.deg{color:var(--derived);background:rgba(212,162,76,.14)}
++.stat.mis{color:var(--missing);background:rgba(168,98,138,.14)}
++
++/* ---------- DAG: sentiment dipisah ---------- */
++.dag{margin-top:12px;border:1px solid var(--rule);border-top:2px solid var(--derived);background:var(--panel);display:grid;grid-template-columns:200px 1fr;gap:0}
++.dag-left{border-right:1px solid var(--rule);padding:14px;background:var(--panel2)}
++.dag-lab{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:var(--faint);text-transform:uppercase;margin-bottom:10px}
++.feed{font-family:var(--mono);font-size:10.5px;color:var(--dim);padding:5px 0;border-bottom:1px dotted var(--rule);display:flex;justify-content:space-between;gap:8px}
++.feed:last-child{border:0}
++.feed b{font-weight:400}
++.feed .ok{color:var(--direct)}
++.feed .no{color:var(--missing)}
++
++/* ---------- kesimpulan ---------- */
++.sum{border:1px solid var(--rule);border-left:3px solid var(--derived);background:var(--panel);padding:18px 20px}
++.sum-narr{font-family:var(--serif);font-size:16px;line-height:1.62;max-width:74ch}
++.sum-narr mark{background:rgba(212,162,76,.16);color:var(--derived);padding:0 2px}
++.limit{margin-top:14px;padding-top:12px;border-top:1px solid var(--rule);font-family:var(--mono);font-size:10.5px;color:var(--dim);display:flex;gap:8px;flex-wrap:wrap;align-items:baseline}
++.pill{border:1px solid var(--rule);padding:2px 7px;font-size:9.5px;letter-spacing:.06em}
++.pill.w{color:var(--derived);border-color:rgba(212,162,76,.4)}
++
++/* ---------- layer 2: snapshot ---------- */
++.kn{border:1px solid var(--rule);background:var(--panel)}
++.kn-sec{border-bottom:1px solid var(--rule)}
++.kn-sec:last-child{border:0}
++.kn-h{display:flex;gap:10px;align-items:baseline;padding:9px 14px;background:var(--panel2);font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
++.kn-h i{color:var(--faint);font-style:normal}
++.rows{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr))}
++.row{padding:9px 14px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);font-family:var(--mono);font-size:11px;display:flex;justify-content:space-between;gap:10px;align-items:baseline}
++.row k{color:var(--faint);font-weight:400}
++.row v{color:var(--text)}
++.row.m v{color:var(--missing);font-size:10px;letter-spacing:.04em}
++.row.m{background:rgba(168,98,138,.045)}
++.row.nm v{color:var(--faint);font-size:10px}
++.peer{margin-top:12px;border:1px dashed var(--rule);background:transparent;padding:14px}
++.peer-h{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:4px}
++.peer-note{font-family:var(--serif);font-size:12.5px;color:var(--dim);margin-bottom:12px}
++
++/* ---------- flag ---------- */
++.flags{border:1px solid var(--flag);border-left-width:3px;background:rgba(196,87,79,.06);padding:12px 14px;margin-bottom:12px}
++.flag{display:flex;gap:10px;align-items:baseline;font-family:var(--mono);font-size:11px;padding:4px 0}
++.flag .sev{font-size:9px;letter-spacing:.1em;padding:2px 6px;border:1px solid}
++.sev.t{color:var(--flag);border-color:var(--flag)}
++.sev.u{color:var(--missing);border-color:var(--missing)}
++.flag span{color:var(--dim)}
++
++/* ---------- 3 kolom modul ---------- */
++.mods{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
++.mod{border:1px solid var(--rule);background:var(--panel);display:flex;flex-direction:column}
++.mod-h{padding:12px 14px;border-bottom:1px solid var(--rule);background:var(--panel2)}
++.mod-n{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
++.stance{font-family:var(--mono);font-size:18px;font-weight:600;letter-spacing:-.01em;margin-top:6px}
++.stance{color:var(--text)}  /* D-09/§4b: stance TIDAK diwarnai menurut "bagusnya" — kosakata 3 modul tak sebanding */
++.mod-b{padding:12px 14px;font-family:var(--serif);font-size:13px;line-height:1.55;border-bottom:1px solid var(--rule)}
++.blk{padding:10px 14px;border-bottom:1px solid var(--rule)}
++.blk:last-child{border:0;margin-top:auto}
++.blk-l{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:6px}
++.conf{font-family:var(--mono);font-size:11px;display:flex;align-items:baseline;gap:8px}
++.conf b{font-size:16px;font-weight:600}
++.bar{height:3px;background:var(--rule);margin-top:7px}
++.bar i{display:block;height:100%;background:var(--dim)}  /* §4b: confidence SELALU netral, tak pernah semantik */
++.item{font-family:var(--mono);font-size:10.5px;color:var(--dim);padding:3px 0;line-height:1.5}
++.item:before{content:"— ";color:var(--faint)}
++.cite{color:var(--direct);text-decoration:none;border-bottom:1px dotted rgba(95,179,201,.4);cursor:pointer}
++.cite:hover{background:rgba(95,179,201,.1)}
++.fr{padding:5px 0;border-bottom:1px dotted var(--rule);font-family:var(--mono);font-size:10px}
++.fr:last-child{border:0}
++.fr b{color:var(--flag);font-weight:400}
++.fr i{font-style:normal;color:var(--dim);display:block;margin-top:2px;line-height:1.5}
++
++/* ---------- synthesis: DI BAWAH (S1) ---------- */
++.syn{margin-top:12px;border:1px solid var(--rule);border-top:2px solid var(--rule);background:var(--panel2)}
++.syn-h{display:flex;gap:12px;align-items:baseline;padding:11px 18px;border-bottom:1px solid var(--rule)}
++.syn-t{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
++.syn-r{margin-left:auto;font-family:var(--mono);font-size:9.5px;color:var(--faint)}
++.syn-b{padding:18px}
++.syn-narr{font-family:var(--serif);font-size:15.5px;line-height:1.65;max-width:78ch}
++.dv{margin-top:16px;border-top:1px solid var(--rule);padding-top:14px}
++.dv-row{display:grid;grid-template-columns:88px 1fr;gap:14px;padding:8px 0;border-bottom:1px dotted var(--rule);align-items:start}
++.dv-row:last-child{border:0}
++.dv-k{font-family:var(--mono);font-size:9px;letter-spacing:.08em;color:var(--faint);text-transform:uppercase;padding-top:2px}
++.dv-v{font-family:var(--mono);font-size:10.5px;color:var(--dim);line-height:1.6}
++.rc{color:var(--derived)}
++.syn-f{padding:11px 18px;border-top:1px solid var(--rule);font-family:var(--mono);font-size:10px;color:var(--faint);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
++
++.lrow{display:flex;gap:10px;align-items:baseline;font-family:var(--mono);font-size:11px;padding:5px 0;border-bottom:1px dotted var(--rule)}
++.lrow b{font-weight:600;width:46px}
++.lrow span{color:var(--dim);flex:1;font-size:10px}
++.lrow i{font-style:normal;color:var(--faint);font-size:9.5px}
++.lrow.sel{background:rgba(95,179,201,.08);box-shadow:-8px 0 0 rgba(95,179,201,.08),8px 0 0 rgba(95,179,201,.08)}
++.note{margin-top:10px;font-family:var(--mono);font-size:10px;color:var(--faint);line-height:1.7}
++[hidden]{display:none!important}
++@media(max-width:820px){.mods{grid-template-columns:1fr}.dag{grid-template-columns:1fr}.dag-left{border-right:0;border-bottom:1px solid var(--rule)}}
++@media(prefers-reduced-motion:reduce){*{transition:none!important}}
++</style>
++</head>
++<body>
++
++<div class="top"><div class="top-in">
++  <div class="brand">AlphaForge <b>v2</b> — Dashboard Lokal</div>
++  <div class="tabs" role="tablist">
++    <button class="tab" role="tab" aria-selected="true" data-p="l1">Layer 1 — Market Context</button>
++    <button class="tab" role="tab" aria-selected="false" data-p="ls">Daftar — masuk lewat lensa</button>
++    <button class="tab" role="tab" aria-selected="false" data-p="l2">Saham — AAPL</button>
++  </div>
++</div></div>
++
++<div class="wrap">
++
++<!-- ============ LAYER 1 ============ -->
++<div id="l1">
++  <div class="meta">
++    <div><span>Session</span><b>2026-07-16T09:14Z</b></div>
++    <div><span>Komponen</span><b>12</b></div>
++    <div class="warn"><span>Degraded</span><b>1</b></div>
++    <div class="warn"><span>Missing</span><b>1</b></div>
++    <div><span>Dihitung</span><b>sekali per sesi</b></div>
++  </div>
++
++  <div class="sec">
++    <div class="sec-head">
++      <div class="sec-n">§1</div><div class="sec-t">Bukti Terkini &amp; Analisa</div>
++      <div class="sec-note">urut mengikuti DAG — 11 leaf, lalu composite</div>
++    </div>
++
++    <div class="grid">
++      <!-- DIRECT -->
++      <div class="card">
++        <div class="card-top"><div class="card-name">Yield Curve</div><div class="kind d">DIRECT</div></div>
++        <div class="val">−0.42<small> % · 10Y–2Y</small></div>
++        <div class="narr">Inverted selama 14 bulan berturut. Spread melebar 6bp dari sesi lalu.</div>
++        <div class="prov"><b>FRED</b> · T10Y2Y · <b>09:14Z</b></div>
++      </div>
++
++      <div class="card">
++        <div class="card-top"><div class="card-name">Volatility Index</div><div class="kind d">DIRECT</div></div>
++        <div class="val">18.4</div>
++        <div class="narr">Di bawah rata-rata 20 tahun (19.5). Tidak ada lonjakan dalam 30 hari.</div>
++        <div class="prov"><b>Yahoo</b> · ^VIX · <b>09:14Z</b></div>
++      </div>
++
++      <div class="card">
++        <div class="card-top"><div class="card-name">Currency / DXY</div><div class="kind d">DIRECT</div></div>
++        <div class="val">103.21</div>
++        <div class="narr">Menguat 1.8% dalam 30 hari. Tekanan pada emiten berpendapatan luar negeri.</div>
++        <div class="prov"><b>Yahoo</b> · DX-Y.NYB · <b>09:14Z</b></div>
++      </div>
++
++      <div class="card">
++        <div class="card-top"><div class="card-name">Commodity Signals</div><div class="kind d">DIRECT</div></div>
++        <div class="val">71.30<small> · WTI</small></div>
++        <div class="narr">Emas 2,340 (+0.4%). Energi datar tiga sesi.</div>
++        <div class="prov"><b>Yahoo</b> · CL=F, GC=F · <b>09:14Z</b></div>
++      </div>
++
++      <div class="card">
++        <div class="card-top"><div class="card-name">Market Regime</div><div class="kind d">DIRECT</div></div>
++        <div class="val">BULL</div>
++        <div class="narr">S&amp;P di atas MA200 selama 92 sesi. Jarak ke MA200: +7.1%.</div>
++        <div class="prov"><b>Yahoo</b> · ^GSPC · <b>09:14Z</b></div>
++      </div>
++
++      <div class="card">
++        <div class="card-top"><div class="card-name">Sector Rotation</div><div class="kind d">DIRECT</div></div>
++        <div class="val">XLK<small> · memimpin</small></div>
++        <div class="narr">Teknologi unggul 30 hari (+4.2%). Utilities tertinggal (−2.1%).</div>
++        <div class="prov"><b>Yahoo</b> · 11 sector ETF · <b>09:14Z</b></div>
++      </div>
++
++      <div class="card">
++        <div class="card-top"><div class="card-name">Liquidity Conditions</div><div class="kind d">DIRECT</div></div>
++        <div class="val">+2.1<small> % · M2 YoY</small></div>
++        <div class="narr">Neraca Fed turun $14M dari bulan lalu. Pengetatan berlanjut, laju melambat.</div>
++        <div class="prov"><b>FRED</b> · M2SL, WALCL · <b>09:14Z</b></div>
++      </div>
++
++      <div class="card">
++        <div class="card-top"><div class="card-name">Macro Calendar</div><div class="kind d">DIRECT</div></div>
++        <div class="val">3<small> hari · CPI</small></div>
++        <div class="narr">CPI rilis 19 Jul. FOMC 31 Jul. Dua peristiwa dalam 15 hari.</div>
++        <div class="prov"><b>FRED</b> · release calendar · <b>09:14Z</b></div>
++      </div>
++
++      <!-- DERIVED -->
++      <div class="card">
++        <div class="card-top"><div class="card-name">Business Cycle Stage</div><div class="kind v">DERIVED</div></div>
++        <div class="val">MID<small>-cycle</small></div>
++        <div class="narr">PMI 52.1 ekspansif, unemployment datar 4.1%, GDP QoQ +2.0%. Tidak ada indikator yang menunjuk late-cycle.</div>
++        <div class="built"><em>DIKONSTRUKSI DARI</em><br>GDP QoQ · PMI · unemployment trend<br>→ klasifikasi 4 tahap</div>
++        <div class="prov"><b>FRED</b> · GDPC1, NAPM, UNRATE · <b>09:14Z</b> · <b>method 1.0.0</b></div>
++      </div>
++
++      <div class="card">
++        <div class="card-top"><div class="card-name">Money Flow</div><div class="kind v">DERIVED</div></div>
++        <div class="val">XLK<small> · inflow</small></div>
++        <div class="narr">Volume XLK +18% di atas rata-rata 20 hari dengan harga naik. XLU keluar.</div>
++        <div class="built"><em>DIKONSTRUKSI DARI</em><br>volume + price action 11 sector ETF<br>→ arah aliran relatif</div>
++        <div class="prov"><b>Yahoo</b> · 11 sector ETF · <b>09:14Z</b> · <b>method 1.0.0</b></div>
++      </div>
++
++      <div class="card mis">
++        <div class="card-top"><div class="card-name">Market Breadth</div><div class="kind v">DERIVED</div><div class="stat mis">MISSING</div></div>
++        <div class="val">TIDAK DIHITUNG</div>
++        <div class="narr" style="color:var(--missing);opacity:.85">Cache harga universe Screening belum terisi. Komponen tidak menarik ribuan call sendiri — ia menunggu cache.</div>
++        <div class="built" style="border-color:var(--missing);background:rgba(168,98,138,.05)"><em style="color:var(--missing)">SEHARUSNYA DARI</em><br>universe hasil Screening (D-05)<br>advance/decline · % di atas MA200</div>
++        <div class="prov"><b>—</b> · menunggu cache Screening · <b>method 1.0.0</b></div>
++      </div>
++    </div>
++
++    <!-- composite dipisah: layout mengajarkan DAG -->
++    <div class="dag">
++      <div class="dag-left">
++        <div class="dag-lab">Input dari Layer 1</div>
++        <div class="feed"><b>Volatility Index</b><span class="ok">18.4 ✓</span></div>
++        <div class="feed"><b>Market Breadth</b><span class="no">missing ✗</span></div>
++        <div class="dag-lab" style="margin-top:14px">Input luar</div>
++        <div class="feed"><b>AAII survey</b><span class="ok">✓</span></div>
++        <div class="feed"><b>Put/call ratio</b><span class="ok">✓</span></div>
++      </div>
++      <div class="card" style="border:0">
++        <div class="card-top">
++          <div class="card-name">Market Sentiment — satu-satunya composite</div>
++          <div class="kind v">DERIVED</div><div class="stat deg">DEGRADED</div>
++        </div>
++        <div class="val">GREED<small> · condong</small></div>
++        <div class="narr">AAII bullish 41% (di atas rata-rata historis 37.5%), put/call 0.82. Dihitung tanpa Market Breadth — pembacaan ini <strong style="color:var(--derived)">lebih lemah dari biasanya</strong>, karena breadth justru komponen yang paling sering menyanggah sentimen permukaan saat rally menyempit.</div>
++        <div class="built"><em>DIKONSTRUKSI DARI 3 dari 4 INPUT</em><br>AAII survey · put/call · VIX · <s style="color:var(--missing)">market breadth</s></div>
++        <div class="prov"><b>AAII</b> · <b>CBOE</b> · <b>Yahoo</b> · <b>09:14Z</b> · <b>method 1.0.0</b> · status: degraded</div>
++      </div>
++    </div>
++    <div class="note">↑ Market Sentiment sengaja dipisah dari 11 kartu di atas: ia satu-satunya komponen yang butuh komponen lain, jadi ia dihitung terakhir. Tata letak ini bukan hiasan — ia yang mengajarkan strukturnya.</div>
++  </div>
++
++  <div class="sec">
++    <div class="sec-head">
++      <div class="sec-n">§2</div><div class="sec-t">Kesimpulan Konteks</div>
++      <div class="sec-note">context_summary · dihasilkan Layer 1, bukan dashboard (D-06)</div>
++    </div>
++    <div class="sum">
++      <div class="sum-narr">
++        Sinyal makro <mark>bertentangan arah</mark>. Yield curve inverted 14 bulan dan likuiditas masih mengetat — dua penanda late-cycle. Tapi Business Cycle Stage membaca mid-cycle dari PMI, unemployment, dan GDP, dan Market Regime bull 92 sesi. Sentimen condong greed dengan pijakan lemah.
++        <br><br>
++        Dua komponen tidak utuh. Market Breadth tidak dihitung, dan itu <mark>menjatuhkan Market Sentiment ke degraded</mark> — persis komponen yang biasanya menyanggah sentimen permukaan justru yang hilang. Ketegangan makro di atas tidak bisa diselesaikan sesi ini.
++      </div>
++      <div class="limit">
++        <span class="pill w">CONFIDENCE: LOW</span>
++        <span>dibatasi oleh:</span>
++        <span class="pill">market_breadth — missing</span>
++        <span class="pill">market_sentiment — degraded</span>
++        <span style="margin-left:auto;color:var(--faint)">10 dari 12 komponen utuh · method 1.0.0</span>
++      </div>
++    </div>
++    <div class="note">Tidak ada skor market. "Skor 6.5/10" akan jadi satu-satunya yang dibaca dari 12 komponen, dan 11 kartu di atas berubah jadi hiasan — larangannya sejajar dengan larangan verdict di Aggregator.</div>
++  </div>
++</div>
++
++
++<!-- ============ DAFTAR (D-08) ============ -->
++<div id="ls" hidden>
++  <div class="meta">
++    <div><span>Kandidat lolos Screening</span><b>2.147</b></div>
++    <div><span>Daftar</span><b>3 lensa + 1 divergensi</b></div>
++    <div><span>Digabung?</span><b style="color:var(--direct)">tidak pernah (L1)</b></div>
++    <div class="warn"><span>Konteks sesi</span><b>low confidence</b></div>
++  </div>
++
++  <div class="sec">
++    <div class="sec-head"><div class="sec-n">§0</div><div class="sec-t">Pilih Pertanyaanmu Dulu</div>
++      <div class="sec-note">bukan sahamnya</div></div>
++    <div class="note" style="margin:0 0 20px;font-size:11.5px">
++      Tidak ada satu daftar berperingkat. Prinsip #3 melarang <strong>menggabung</strong> lensa — bukan <strong>mengurutkan di dalam</strong> satu lensa. Tiap daftar memakai kosakatanya sendiri (D-09), jadi lintas daftar tidak ada operasi banding. Perhatikan: <strong>tidak ada kolom lensa lain</strong> di manapun (L2).
++    </div>
++
++    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:12px">
++
++      <div class="mod">
++        <div class="mod-h"><div class="mod-n">Multibagger</div>
++          <div style="font-family:var(--serif);font-size:13px;color:var(--dim);margin-top:5px">Ada ruang untuk kelipatan besar?</div></div>
++        <div class="blk"><div class="blk-l">Urut menurut kosakata sendiri · 2.147</div>
++          <div class="lrow"><b>PLTR</b><span>ruang_terbuka</span><i>c74</i></div>
++          <div class="lrow"><b>IONQ</b><span>ruang_terbuka</span><i>c58</i></div>
++          <div class="lrow"><b>RKLB</b><span>ruang_terbuka</span><i>c51</i></div>
++          <div class="lrow"><b>SOFI</b><span>ruang_sempit</span><i>c69</i></div>
++          <div class="lrow sel"><b>AAPL</b><span>ruang_sempit</span><i>c54</i></div>
++          <div class="lrow" style="color:var(--faint)">… 2.142 lagi</div>
++        </div>
++      </div>
++
++      <div class="mod">
++        <div class="mod-h"><div class="mod-n">Quality / Compound</div>
++          <div style="font-family:var(--serif);font-size:13px;color:var(--dim);margin-top:5px">Ini mesin compounding?</div></div>
++        <div class="blk"><div class="blk-l">Urut menurut kosakata sendiri · 2.147</div>
++          <div class="lrow"><b>MSFT</b><span>compounding_kuat</span><i>c81</i></div>
++          <div class="lrow sel"><b>AAPL</b><span>compounding_kuat</span><i>c66</i></div>
++          <div class="lrow"><b>COST</b><span>compounding_kuat</span><i>c64</i></div>
++          <div class="lrow"><b>NKE</b><span>compounding_rapuh</span><i>c58</i></div>
++          <div class="lrow"><b>INTC</b><span>bukan_compounder</span><i>c72</i></div>
++          <div class="lrow" style="color:var(--faint)">… 2.142 lagi</div>
++        </div>
++      </div>
++
++      <div class="mod">
++        <div class="mod-h"><div class="mod-n">Speculative</div>
++          <div style="font-family:var(--serif);font-size:13px;color:var(--dim);margin-top:5px">Ada asimetri berkatalis?</div></div>
++        <div class="blk"><div class="blk-l">Urut menurut kosakata sendiri · 2.147</div>
++          <div class="lrow"><b>MRNA</b><span>asimetri_berkatalis</span><i>c62</i></div>
++          <div class="lrow"><b>LUNR</b><span>asimetri_berkatalis</span><i>c44</i></div>
++          <div class="lrow"><b>PLTR</b><span>asimetri_tanpa_katalis</span><i>c57</i></div>
++          <div class="lrow sel"><b>AAPL</b><span>asimetri_tanpa_katalis</span><i>c61</i></div>
++          <div class="lrow"><b>KO</b><span>tanpa_asimetri</span><i>c77</i></div>
++          <div class="lrow" style="color:var(--faint)">… 2.142 lagi</div>
++        </div>
++      </div>
++
++      <div class="mod" style="border-color:var(--derived)">
++        <div class="mod-h" style="border-bottom-color:var(--derived)"><div class="mod-n" style="color:var(--derived)">Divergensi</div>
++          <div style="font-family:var(--serif);font-size:13px;color:var(--dim);margin-top:5px">Di mana ketiga lensa paling berselisih?</div></div>
++        <div class="blk"><div class="blk-l">Urut menurut selisih — <strong>bukan stance</strong> (L5)</div>
++          <div class="lrow"><b>INTC</b><span style="color:var(--derived)">3 divergensi</span><i>dalam</i></div>
++          <div class="lrow"><b>PLTR</b><span style="color:var(--derived)">3 divergensi</span><i>dalam</i></div>
++          <div class="lrow sel"><b>AAPL</b><span style="color:var(--derived)">2 divergensi</span><i>sedang</i></div>
++          <div class="lrow"><b>NKE</b><span style="color:var(--derived)">2 divergensi</span><i>sedang</i></div>
++          <div class="lrow" style="color:var(--faint)">… 2.143 lagi</div>
++        </div>
++        <div class="blk"><div class="blk-l">Kenapa daftar ini ada</div>
++          <div style="font-family:var(--serif);font-size:12.5px;color:var(--dim);line-height:1.55">Bukan peringkat kualitas — peringkat <strong>seberapa banyak yang bisa dipelajari</strong>. Saham yang ketiganya sepakat tidak mengajarkan apa pun yang tidak bisa didapat dari satu lensa saja.</div>
++        </div>
++      </div>
++
++    </div>
++    <div class="note">
++      AAPL ditandai di keempat daftar cuma untuk mockup ini — <strong>di dashboard asli kamu cuma melihat satu daftar sekali waktu</strong>, karena melihat empat sekaligus sudah setengah jalan menuju penggabungan yang dilarang.<br>
++      Tiap baris cuma: ticker · stance lensa itu · confidence. Tidak ada kolom lensa lain (L2). Baris daftar bukan tempat meringkas — ia tempat memutuskan mau klik atau tidak.
++    </div>
++  </div>
++</div>
++
++<!-- ============ LAYER 2 ============ -->
++<div id="l2" hidden>
++  <div class="meta">
++    <div><span>Ticker</span><b>AAPL — Apple Inc.</b></div>
++    <div><span>Snapshot evidence</span><b>2026-07-15</b></div>
++    <div><span>Kelengkapan field</span><b>41 / 47</b></div>
++    <div><span>Screening flags</span><b>—</b></div>
++    <div><span>Konteks sesi</span><b>2026-07-16T09:14Z (low confidence)</b></div>
++  </div>
++
++  <div class="sec">
++    <div class="sec-head">
++      <div class="sec-n">§1</div><div class="sec-t">Snapshot — Fakta Perusahaan</div>
++      <div class="sec-note">7 bagian Knowledge · tanpa kata sifat evaluatif</div>
++    </div>
++
++    <div class="kn">
++      <div class="kn-sec"><div class="kn-h"><i>1</i> Identitas</div><div class="rows">
++        <div class="row"><k>ticker</k><v>AAPL</v></div>
++        <div class="row"><k>sektor</k><v>Technology</v></div>
++        <div class="row"><k>industri</k><v>Consumer Electronics</v></div>
++        <div class="row"><k>exchange</k><v>NASDAQ</v></div>
++      </div></div>
++
++      <div class="kn-sec"><div class="kn-h"><i>2</i> Kesehatan Finansial</div><div class="rows">
++        <div class="row"><k>revenue TTM</k><v>394.3B</v></div>
++        <div class="row"><k>gross margin</k><v>42.1%</v></div>
++        <div class="row"><k>operating margin</k><v>29.8%</v></div>
++        <div class="row"><k>FCF TTM</k><v>108.8B</v></div>
++        <div class="row"><k>FCF positif berturut</k><v>8 kuartal</v></div>
++        <div class="row"><k>debt/equity</k><v>1.87</v></div>
++      </div></div>
++
++      <div class="kn-sec"><div class="kn-h"><i>3</i> Posisi Kompetitif</div><div class="rows">
++        <div class="row"><k>model bisnis</k><v>hardware + services</v></div>
++        <div class="row"><k>konsentrasi revenue</k><v>iPhone 52%</v></div>
++        <div class="row m"><k>segmen geografis</k><v>MISSING — parse 10-K gagal</v></div>
++      </div></div>
++
++      <div class="kn-sec"><div class="kn-h"><i>4</i> Tren Historis</div><div class="rows">
++        <div class="row"><k>return 12 bulan</k><v>+18.4%</v></div>
++        <div class="row"><k>volatilitas 90 hari</k><v>21.3%</v></div>
++        <div class="row"><k>earnings beat 8 kuartal</k><v>7 / 8</v></div>
++      </div></div>
++
++      <div class="kn-sec"><div class="kn-h"><i>5</i> Kepemilikan</div><div class="rows">
++        <div class="row"><k>institusional</k><v>61.2%</v></div>
++        <div class="row"><k>insider</k><v>0.07%</v></div>
++        <div class="row"><k>insider sell 90 hari</k><v>4 transaksi · 182M</v></div>
++      </div></div>
++
++      <div class="kn-sec"><div class="kn-h"><i>6</i> Valuasi <i>— angka absolut saja (D-02)</i></div><div class="rows">
++        <div class="row"><k>P/E trailing</k><v>34.2</v></div>
++        <div class="row"><k>P/S</k><v>8.6</v></div>
++        <div class="row"><k>EV/EBITDA</k><v>25.1</v></div>
++        <div class="row"><k>FCF yield</k><v>2.8%</v></div>
++        <div class="row nm"><k>P/E forward</k><v>tidak tersedia — estimasi analis tak ditarik</v></div>
++      </div></div>
++
++      <div class="kn-sec"><div class="kn-h"><i>7</i> Governance &amp; Peristiwa Filing <i>— bahan Risk (D-01)</i></div><div class="rows">
++        <div class="row"><k>shares outstanding 12bln</k><v>−2.4% (buyback)</v></div>
++        <div class="row m"><k>riwayat auditor</k><v>MISSING — EDGAR 403</v></div>
++        <div class="row"><k>restatement 2 tahun</k><v>tidak ada</v></div>
++        <div class="row"><k>litigasi material</k><v>2 tercatat · antitrust</v></div>
++      </div></div>
++    </div>
++
++    <div class="peer">
++      <div class="peer-h">Peer / Relative Comparison — konteks peer, bukan fakta perusahaan</div>
++      <div class="peer-note">Dipisah dari bagian 2 dan 6 supaya batas D-03 tetap terlihat di layar: Knowledge murni per-ticker, semua angka relatif hidup di sini.</div>
++      <div class="rows" style="border-top:1px solid var(--rule)">
++        <div class="row"><k>peer group</k><v>7 ticker · Consumer Electronics</v></div>
++        <div class="row"><k>P/E vs median</k><v>34.2 vs 19.4 · p86</v></div>
++        <div class="row"><k>gross margin vs median</k><v>42.1% vs 31.2% · p91</v></div>
++        <div class="row"><k>peer gagal ditarik</k><v>1 — SONY (timeout)</v></div>
++      </div>
++    </div>
++  </div>
++
++  <div class="sec">
++    <div class="sec-head">
++      <div class="sec-n">§2</div><div class="sec-t">Hasil Reasoning</div>
++      <div class="sec-note">urutan tetap · tanpa peringkat</div>
++    </div>
++
++    <div class="flags">
++      <div class="flag"><span class="sev t">TRIGGERED</span><b>insider_selling_90d</b><span>4 transaksi senilai 182M dalam 90 hari</span></div>
++      <div class="flag"><span class="sev u">UNDETERMINED</span><b>auditor_change</b><span>EDGAR 403 — <strong style="color:var(--missing)">tidak sempat dilihat</strong>, bukan "tidak ada masalah"</span></div>
++    </div>
++
++    <div class="mods">
++      <div class="mod">
++        <div class="mod-h"><div class="mod-n">Multibagger</div><div class="stance">ruang_sempit</div></div>
++        <div class="mod-b">Fundamental kuat, tapi <a class="cite">P/E 34.2</a> pada p86 peer group memangkas ruang naik. Basis 3.4T membuat 10x menuntut kapitalisasi yang tak punya preseden.</div>
++        <div class="blk"><div class="blk-l">Confidence</div><div class="conf"><b>54</b> MEDIUM <span style="color:var(--faint);font-size:9px">· plafon ConfidenceReport 66 (V6)</span></div><div class="bar"><i style="width:54%"></i></div>
++          <div class="item">konteks makro low confidence — breadth missing</div>
++          <div class="item">P/E forward tidak tersedia</div>
++        </div>
++        <div class="blk"><div class="blk-l">Respons flag — wajib (V1)</div>
++          <div class="fr"><b>insider_selling_90d</b> · lowers_confidence<i>182M pada kap 3.4T = 0.005%. Tidak mengubah stance; stance sudah weak karena valuasi.</i></div>
++          <div class="fr"><b>auditor_change</b> · lowers_confidence<i>Tidak bisa diverifikasi. Untuk emiten seukuran ini pergantian auditor akan terberitakan luas, jadi bobotnya kecil — tapi tetap gap.</i></div>
++        </div>
++        <div class="blk"><div class="blk-l">Context used</div>
++          <div class="item"><a class="cite">sector_rotation</a> — XLK memimpin, mendukung</div>
++          <div class="item"><a class="cite">business_cycle_stage</a> — mid-cycle <span style="color:var(--derived)">(DERIVED)</span></div>
++        </div>
++      </div>
++
++      <div class="mod">
++        <div class="mod-h"><div class="mod-n">Quality / Compound</div><div class="stance">compounding_kuat</div></div>
++        <div class="mod-b">Margin 42.1% pada p91 peer group, FCF positif 8 kuartal, shares outstanding turun 2.4%. <a class="cite">P/E 34.2</a> wajar untuk konsistensi margin sebesar ini.</div>
++        <div class="blk"><div class="blk-l">Confidence</div><div class="conf"><b>66</b> MEDIUM <span style="color:var(--faint);font-size:9px">· dipotong plafon V6 dari 78</span></div><div class="bar"><i style="width:66%"></i></div>
++          <div class="item">segmen geografis missing — eksposur DXY tak terukur</div>
++        </div>
++        <div class="blk"><div class="blk-l">Respons flag — wajib (V1)</div>
++          <div class="fr"><b>insider_selling_90d</b> · none<i>Pola terjadwal (10b5-1), bukan diskresioner. Tidak informatif untuk tesis compounding.</i></div>
++          <div class="fr"><b>auditor_change</b> · lowers_confidence<i>Kontinuitas audit adalah bahan langsung tesis quality. Gap ini menahan confidence di 78, bukan 85.</i></div>
++        </div>
++        <div class="blk"><div class="blk-l">Context used</div>
++          <div class="item"><a class="cite">liquidity_conditions</a> — pengetatan melambat</div>
++          <div class="item"><a class="cite">yield_curve</a> — biaya modal</div>
++        </div>
++      </div>
++
++      <div class="mod">
++        <div class="mod-h"><div class="mod-n">Speculative</div><div class="stance">asimetri_tanpa_katalis</div></div>
++        <div class="mod-b">Volatilitas 21.3% terlalu rendah untuk asimetri. Satu katalis terjadwal (<a class="cite">catalysts[0]</a> — earnings 31 Jul), tapi earnings rutin bukan asimetri. <strong>Valuasi tidak relevan tanpa katalis</strong> — tidak ada yang ditunggu.</div>
++        <div class="blk"><div class="blk-l">Confidence</div><div class="conf"><b>61</b> MEDIUM <span style="color:var(--faint);font-size:9px">· plafon ConfidenceReport 66 (V6)</span></div><div class="bar"><i style="width:61%"></i></div>
++          <div class="item">market_sentiment degraded — risk appetite tak terbaca penuh</div>
++        </div>
++        <div class="blk"><div class="blk-l">Respons flag — wajib (V1)</div>
++          <div class="fr"><b>insider_selling_90d</b> · none<i>Tidak mengubah apa pun: stance not_applicable karena tidak ada katalis, bukan karena penilaian risiko.</i></div>
++          <div class="fr"><b>auditor_change</b> · none<i>Tesis spekulatif bergantung katalis, bukan governance. Gap ini tidak menyentuh alasan stance.</i></div>
++        </div>
++        <div class="blk"><div class="blk-l">Context used</div>
++          <div class="item"><a class="cite">market_sentiment</a> — degraded <span style="color:var(--derived)">(DERIVED)</span></div>
++          <div class="item"><a class="cite">macro_calendar</a> — CPI 3 hari, bukan katalis emiten</div>
++        </div>
++        <div class="blk"><div class="blk-l">Catalyst set (D-11)</div>
++          <div class="item">earnings · 31 Jul · <b style="color:var(--direct)">scheduled</b> · kedaluwarsa 01 Agt</div>
++          <div class="item" style="color:var(--faint)">horizon 90 hari · 1 katalis · status ok</div>
++        </div>
++      </div>
++    </div>
++
++    <!-- S1: DI BAWAH tiga kolom, bukan di atas -->
++    <div class="syn">
++      <div class="syn-h">
++        <div class="syn-t">Peta Konvergensi</div>
++        <div class="syn-r">synthesis · D-07 · method 1.0.0 · di bawah tiga kolom (S1)</div>
++      </div>
++      <div class="syn-b">
++        <div class="syn-narr">
++          Ketiganya sepakat fundamentalnya kuat — margin 42.1%, FCF positif 8 kuartal, buyback berjalan. Tidak ada modul yang menyanggah itu.
++          <br><br>
++          Perpecahannya <strong>satu titik saja: apa arti P/E 34.2.</strong> Quality/Compound membacanya wajar untuk margin sekonsisten itu. Multibagger membaca angka yang sama sebagai pemangkas ruang naik. Speculative tidak membacanya sama sekali — tanpa katalis, valuasi bukan pertanyaan yang relevan.
++          <br><br>
++          Jadi ini bukan tiga penilaian berbeda atas satu pertanyaan. Ini <strong>tiga pertanyaan berbeda</strong> yang kebetulan menyentuh angka yang sama.
++        </div>
++
++        <div class="dv">
++          <div class="dv-row">
++            <div class="dv-k">Sepakat</div>
++            <div class="dv-v">fundamental kuat · <b>3/3 modul</b> · sitasi: <a class="cite">knowledge.financial_health.gross_margin</a>, <a class="cite">knowledge.financial_health.fcf_streak</a></div>
++          </div>
++          <div class="dv-row">
++            <div class="dv-k">Berbeda</div>
++            <div class="dv-v">
++              arti P/E 34.2 — multibagger: <b>ruang_sempit</b> · quality: <b>compounding_kuat</b> · speculative: <b>asimetri_tanpa_katalis</b><br>
++              <span class="rc">root_cause: different_weights</span> — ketiganya membaca field yang sama (<a class="cite">knowledge.valuation.pe_trailing</a>), membobotinya berbeda. Bukan gap data.
++            </div>
++          </div>
++          <div class="dv-row">
++            <div class="dv-k">Berbeda</div>
++            <div class="dv-v">
++              bobot flag auditor — quality: <b>lowers_confidence</b> · multibagger: <b>lowers_confidence</b> · speculative: <b>none</b><br>
++              <span class="rc">root_cause: flag_response</span> — kontinuitas audit menyentuh tesis quality secara langsung, tesis spekulatif tidak sama sekali.
++            </div>
++          </div>
++        </div>
++      </div>
++      <div class="syn-f">
++        <span class="pill">CONFIDENCE: 54 — MEDIUM</span>
++        <span>= terendah dari tiga modul (multibagger 54), bukan rata-rata (S4)</span>
++        <span style="margin-left:auto">full_convergence: false</span>
++      </div>
++    </div>
++    <div class="note">
++      Uji pembeda (D-07): coba tutup tiga kolom di atas dan baca peta ini sendirian. Kalau terasa cukup → ia sudah berubah jadi verdict dan D-07 perlu diperketat. Yang benar terasa menggantung, karena ia menunjuk ke atas.<br>
++      Tidak ada di sini: buy/sell/hold, skor, peringkat, "secara keseluruhan", dan skor kesepakatan seperti "3/3 modul positif".
++    </div>
++  </div>
++</div>
++
++</div>
++
++<script>
++const tabs=[...document.querySelectorAll('.tab')];
++tabs.forEach(t=>t.onclick=()=>{
++  tabs.forEach(x=>x.setAttribute('aria-selected', x===t));
++  ['l1','ls','l2'].forEach(id=>document.getElementById(id).hidden = t.dataset.p!==id);
++  window.scrollTo(0,0);
++});
++document.querySelectorAll('.cite').forEach(c=>c.onclick=()=>{
++  c.style.background='rgba(95,179,201,.25)';
++  setTimeout(()=>c.style.background='',450);
++});
++</script>
++</body>
++</html>
+diff --git a/03_LAYER2_SPECS/05_CONFIDENCE_DATA_QUALITY.md b/03_LAYER2_SPECS/05_CONFIDENCE_DATA_QUALITY.md
+index c4349c2..8db22b0 100644
+--- a/03_LAYER2_SPECS/05_CONFIDENCE_DATA_QUALITY.md
++++ b/03_LAYER2_SPECS/05_CONFIDENCE_DATA_QUALITY.md
+@@ -32,6 +32,23 @@ Detail bobot tiap komponen di atas dan ambang kategori didiskusikan lebih lanjut
+ 
+ Komponen Layer 1 yang derived/approximated (Business Cycle Stage, Money Flow, Market Sentiment) tunduk pada semangat prinsip yang sama (Prinsip #5) tapi **tidak** memakai skema skor formal di dokumen ini — mekanismenya cukup pernyataan eksplisit di level definisi komponen bahwa pembacaannya dikonstruksi/didekati (sudah ada di tiap spec Layer 1 terkait).
+ 
++## Kontrak & Hubungan dengan Confidence Modul (D-11)
++
++Menghasilkan `ConfidenceReport` — bentuknya di `01_ARCHITECTURE/04_DATA_CONTRACTS.md` §5c. Berjalan di **Fase B** karena butuh `peer_failures` & `low_sample_size` dari Peer.
++
++Sampai revisi ini komponen ini punya spec tapi **tidak punya output yang didefinisikan** — yang ada cuma `confidence` inline di `ModuleOutput`, sehingga tidak jelas #5 ini komponen atau bukan.
++
++Dua hal yang selama ini kabur, sekarang tegas:
++
++| | Mengukur | Jumlah |
++|---|---|---|
++| `ConfidenceReport` | seberapa kuat **data** saham ini | 1 per ticker |
++| `ModuleOutput.confidence` | seberapa yakin **modul ini** pada kesimpulannya | 3 per ticker |
++
++**Aturan V6 — `ModuleOutput.confidence.score` ≤ `ConfidenceReport.overall.score`.** Modul tidak boleh lebih yakin pada kesimpulannya daripada data yang menopangnya. Tanpa V6, modul bisa mengaku yakin 90 di atas profil yang 60% lengkap dan tidak ada yang menghentikannya.
++
++Kebalikannya tetap sah dan penting: modul **boleh** jauh kurang yakin dari data yang tersedia. Data lengkap tidak mewajibkan kesimpulan kuat — sering justru sebaliknya.
++
+ ## Terhubung Dengan
+ 
+ Knowledge (sumber perhitungan), Screening (flag awal yang jadi input), tiga modul reasoning (menerima & meneruskan confidence ke kesimpulannya masing-masing), Aggregator & Output (ditampilkan bersama hasil akhir).
+diff --git a/03_LAYER2_SPECS/07_MODULE_MULTIBAGGER.md b/03_LAYER2_SPECS/07_MODULE_MULTIBAGGER.md
+index 22fddf9..e3e9359 100644
+--- a/03_LAYER2_SPECS/07_MODULE_MULTIBAGGER.md
++++ b/03_LAYER2_SPECS/07_MODULE_MULTIBAGGER.md
+@@ -1,7 +1,7 @@
+ # Module — Multibagger
+ 
+ **Status:** Aktif — revisi: kontrak output & aturan validasi flag ditambahkan (D-04)
+-**Doc version:** 2.0.0
++**Doc version:** 2.1.0
+ 
+ ## Definisi
+ 
+@@ -33,10 +33,21 @@ Aturan validasi yang berlaku ke modul ini (output **ditolak** kalau gagal):
+ | V2 | `rationale` tiap flag_response spesifik per flag — rationale identik di ≥2 flag ditandai `generic_response` |
+ | V3 | `confidence.band != high` → `limiters` tidak boleh kosong |
+ | V4 | Field Knowledge berstatus `missing` yang relevan dengan kriteria modul ini wajib muncul di `knowledge_gaps` |
+-| V5 | `stance = not_applicable` wajib disertai `stance_rationale` |
++| V6 | `confidence.score` ≤ `ConfidenceReport.overall.score` — tak boleh lebih yakin dari data yang menopangnya |
++| V5 | Keadaan `*_tak_terbaca` wajib menyebut `knowledge_gaps` penyebabnya |
+ 
+ `context_used` wajib menyebut komponen Layer 1 mana yang benar-benar mempengaruhi `stance` — terutama Sector Rotation & Business Cycle Stage. Kalau `kind=derived` (mis. business_cycle_stage, market_sentiment), modul wajib memperlakukannya sebagai pembacaan yang dikonstruksi, bukan angka otoritatif (Prinsip #5).
+ 
++### Kosakata `stance` — Milik Modul Ini Sendiri (D-09)
++
++**Pertanyaan modul ini:** *Ada ruang untuk kelipatan besar?*
++
++**Kosakata:** `ruang_terbuka` · `ruang_sempit` · `ruang_tertutup` · `ruang_tak_terbaca`
++
++Kosakata ini **tidak dipakai modul lain dan tidak bisa dipetakan ke kosakata modul lain** — pemetaan semacam itu dilarang dibuat (D-09). Versi sebelumnya memakai satu enum bersama (`compelling/interesting/weak`) untuk ketiga modul; itu skala ordinal yang langsung berubah jadi hitungan suara di kepala pembaca.
++
++Di dalam kosakata ini urutan tetap ada dan sah — satu lensa, satu sumbu. Itulah yang membuat daftar lensa ini bisa diurutkan (D-08) tanpa melanggar Prinsip #3: yang dilarang adalah **menggabung** lensa, bukan mengurutkan di dalam satu lensa.
++
+ ## Independensi
+ 
+ Modul ini **tidak boleh** memanggil, membaca state, atau bergantung pada urutan eksekusi terhadap dua modul lain (Prinsip #3). Dites lewat T1 & T2 di `01_ARCHITECTURE/04_DATA_CONTRACTS.md` §6.
+diff --git a/03_LAYER2_SPECS/08_MODULE_QUALITY_COMPOUND.md b/03_LAYER2_SPECS/08_MODULE_QUALITY_COMPOUND.md
+index 2f43f9e..4e24c70 100644
+--- a/03_LAYER2_SPECS/08_MODULE_QUALITY_COMPOUND.md
++++ b/03_LAYER2_SPECS/08_MODULE_QUALITY_COMPOUND.md
+@@ -1,7 +1,7 @@
+ # Module — Quality / Compound
+ 
+ **Status:** Aktif — revisi: kontrak output & aturan validasi flag ditambahkan (D-04)
+-**Doc version:** 2.0.0
++**Doc version:** 2.1.0
+ 
+ ## Definisi
+ 
+@@ -33,10 +33,21 @@ Aturan validasi yang berlaku ke modul ini (output **ditolak** kalau gagal):
+ | V2 | `rationale` tiap flag_response spesifik per flag — rationale identik di ≥2 flag ditandai `generic_response` |
+ | V3 | `confidence.band != high` → `limiters` tidak boleh kosong |
+ | V4 | Field Knowledge berstatus `missing` yang relevan dengan kriteria modul ini wajib muncul di `knowledge_gaps` |
+-| V5 | `stance = not_applicable` wajib disertai `stance_rationale` |
++| V6 | `confidence.score` ≤ `ConfidenceReport.overall.score` — tak boleh lebih yakin dari data yang menopangnya |
++| V5 | Keadaan `*_tak_terbaca` wajib menyebut `knowledge_gaps` penyebabnya |
+ 
+ `context_used` wajib menyebut komponen Layer 1 mana yang benar-benar mempengaruhi `stance` — terutama Yield Curve & Liquidity Conditions. Kalau `kind=derived` (mis. business_cycle_stage, market_sentiment), modul wajib memperlakukannya sebagai pembacaan yang dikonstruksi, bukan angka otoritatif (Prinsip #5).
+ 
++### Kosakata `stance` — Milik Modul Ini Sendiri (D-09)
++
++**Pertanyaan modul ini:** *Ini mesin compounding?*
++
++**Kosakata:** `compounding_kuat` · `compounding_rapuh` · `bukan_compounder` · `mesin_tak_terbaca`
++
++Kosakata ini **tidak dipakai modul lain dan tidak bisa dipetakan ke kosakata modul lain** — pemetaan semacam itu dilarang dibuat (D-09). Versi sebelumnya memakai satu enum bersama (`compelling/interesting/weak`) untuk ketiga modul; itu skala ordinal yang langsung berubah jadi hitungan suara di kepala pembaca.
++
++Di dalam kosakata ini urutan tetap ada dan sah — satu lensa, satu sumbu. Itulah yang membuat daftar lensa ini bisa diurutkan (D-08) tanpa melanggar Prinsip #3: yang dilarang adalah **menggabung** lensa, bukan mengurutkan di dalam satu lensa.
++
+ ## Independensi
+ 
+ Modul ini **tidak boleh** memanggil, membaca state, atau bergantung pada urutan eksekusi terhadap dua modul lain (Prinsip #3). Dites lewat T1 & T2 di `01_ARCHITECTURE/04_DATA_CONTRACTS.md` §6.
+diff --git a/03_LAYER2_SPECS/09_MODULE_SPECULATIVE.md b/03_LAYER2_SPECS/09_MODULE_SPECULATIVE.md
+index 55e094b..ca1ff4c 100644
+--- a/03_LAYER2_SPECS/09_MODULE_SPECULATIVE.md
++++ b/03_LAYER2_SPECS/09_MODULE_SPECULATIVE.md
+@@ -1,7 +1,7 @@
+ # Module — Speculative
+ 
+ **Status:** Aktif — revisi: kontrak output & aturan validasi flag ditambahkan (D-04)
+-**Doc version:** 2.0.0
++**Doc version:** 2.1.0
+ 
+ ## Definisi
+ 
+@@ -33,10 +33,21 @@ Aturan validasi yang berlaku ke modul ini (output **ditolak** kalau gagal):
+ | V2 | `rationale` tiap flag_response spesifik per flag — rationale identik di ≥2 flag ditandai `generic_response` |
+ | V3 | `confidence.band != high` → `limiters` tidak boleh kosong |
+ | V4 | Field Knowledge berstatus `missing` yang relevan dengan kriteria modul ini wajib muncul di `knowledge_gaps` |
+-| V5 | `stance = not_applicable` wajib disertai `stance_rationale` |
++| V6 | `confidence.score` ≤ `ConfidenceReport.overall.score` — tak boleh lebih yakin dari data yang menopangnya |
++| V5 | Keadaan `*_tak_terbaca` wajib menyebut `knowledge_gaps` penyebabnya |
+ 
+ `context_used` wajib menyebut komponen Layer 1 mana yang benar-benar mempengaruhi `stance` — terutama VIX & Market Sentiment. Kalau `kind=derived` (mis. business_cycle_stage, market_sentiment), modul wajib memperlakukannya sebagai pembacaan yang dikonstruksi, bukan angka otoritatif (Prinsip #5).
+ 
++### Kosakata `stance` — Milik Modul Ini Sendiri (D-09)
++
++**Pertanyaan modul ini:** *Ada asimetri berkatalis?*
++
++**Kosakata:** `asimetri_berkatalis` · `asimetri_tanpa_katalis` · `tanpa_asimetri` · `asimetri_tak_terbaca`
++
++Kosakata ini **tidak dipakai modul lain dan tidak bisa dipetakan ke kosakata modul lain** — pemetaan semacam itu dilarang dibuat (D-09). Versi sebelumnya memakai satu enum bersama (`compelling/interesting/weak`) untuk ketiga modul; itu skala ordinal yang langsung berubah jadi hitungan suara di kepala pembaca.
++
++Di dalam kosakata ini urutan tetap ada dan sah — satu lensa, satu sumbu. Itulah yang membuat daftar lensa ini bisa diurutkan (D-08) tanpa melanggar Prinsip #3: yang dilarang adalah **menggabung** lensa, bukan mengurutkan di dalam satu lensa.
++
+ ## Independensi
+ 
+ Modul ini **tidak boleh** memanggil, membaca state, atau bergantung pada urutan eksekusi terhadap dua modul lain (Prinsip #3). Dites lewat T1 & T2 di `01_ARCHITECTURE/04_DATA_CONTRACTS.md` §6.
+diff --git a/03_LAYER2_SPECS/10_CATALYST_TRACKING.md b/03_LAYER2_SPECS/10_CATALYST_TRACKING.md
+index a096def..4dce4ec 100644
+--- a/03_LAYER2_SPECS/10_CATALYST_TRACKING.md
++++ b/03_LAYER2_SPECS/10_CATALYST_TRACKING.md
+@@ -1,6 +1,8 @@
+ # Catalyst Tracking
+ 
+-**Status:** Aktif
++**Status:** Aktif — revisi: kontrak `CatalystSet`, posisi di Fase A, kenapa bukan bagian Knowledge (D-11)
++**Doc version:** 2.0.0
++**Method version:** 1.0.0
+ 
+ ## Definisi
+ 
+@@ -18,6 +20,22 @@ Kalender earnings (Yahoo Finance), berita & filing terkait (SEC EDGAR, sumber be
+ 
+ Identifikasi peristiwa mendatang yang relevan untuk saham tertentu, beri estimasi tanggal dan potensi dampaknya.
+ 
++## Posisi & Kontrak (D-11)
++
++Berjalan di **Fase A**, per-ticker, diturunkan dari Evidence. Menghasilkan `CatalystSet` — bentuknya dikunci di `01_ARCHITECTURE/04_DATA_CONTRACTS.md` §5b.
++
++Sampai revisi ini komponen ini **yatim**: ada di daftar file, ada di diagram, disebut Speculative — tapi tidak punya kontrak, tidak ada di `AggregatorOutput`, dan tidak punya slot di Knowledge. Artinya modul Speculative merujuk katalis yang tidak punya field di mana pun.
++
++### Kenapa bukan bagian Knowledge
++
++Katalis bukan fakta tentang keadaan perusahaan — ia fakta tentang kalender. Alasan pokoknya **umur simpan**: `KnowledgeProfile` adalah potret pada satu `evidence_snapshot_date` dan seluruh isinya meluruh dengan laju yang sama. Katalis punya kedaluwarsa masing-masing — earnings 19 Juli mati pada 20 Juli, margin 42% tidak.
++
++Satu paket berisi field dengan laju luruh berbeda akan salah dibaca cepat atau lambat. Karena itu tiap katalis wajib punya `expires_at` eksplisit, supaya dashboard bisa menandai yang sudah lewat alih-alih menampilkannya seolah masih ditunggu.
++
++### Kepastian Bertingkat
++
++`certainty: scheduled | expected | rumored` — earnings terjadwal dan rumor akuisisi tidak boleh masuk sebagai jenis benda yang sama. Modul Speculative berhak tahu bedanya, dan `rumored` sepatutnya menurunkan confidence, bukan menaikkan stance.
++
+ ## Terhubung Dengan
+ 
+ Dipakai terutama oleh Speculative Module sebagai bagian dari reasoning-nya.
+-- 
+2.43.0
+

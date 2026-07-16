@@ -1,6 +1,7 @@
 # AlphaForge v2 — Glosarium
 
-**Status:** Aktif — revisi untuk kelengkapan cakupan & konsistensi dengan `02_PRINCIPLES.md`
+**Status:** Aktif — revisi: istilah dari kontrak data & keputusan D-01..D-05 ditambahkan
+**Doc version:** 1.2.0
 
 Istilah-istilah kunci yang dipakai konsisten di seluruh dokumen AlphaForge v2. Disusun per kelompok: konsep fondasi, istilah Layer 1, istilah Layer 2.
 
@@ -13,6 +14,12 @@ Kumpulan hasil dari 12 komponen Layer 1, digabung jadi satu paket konteks yang d
 
 **Derived/Approximated Data**
 Data yang tidak tersedia lewat satu API siap pakai, tapi dikonstruksi dari kombinasi beberapa sumber data mentah gratis (misal Business Cycle Stage, Money Flow, Market Sentiment). Sesuai Prinsip #5 (`02_PRINCIPLES.md`), komponen berkategori ini wajib secara eksplisit menyatakan dirinya sebagai pembacaan yang dikonstruksi/didekati — bukan angka resmi tunggal dari satu sumber otoritatif — supaya tidak keliru dianggap sekuat data langsung seperti VIX atau DXY.
+
+**Method Version**
+Versi *formula* sebuah komponen (semver), beda dari versi dokumennya. Wajib untuk komponen derived/approximated, dan wajib ikut tercatat di tiap entri Historical Tracking (Prinsip #6). Perubahan logika yang mengubah hasil wajib menaikkannya — tanpa ini, audit di masa depan bisa membandingkan kesimpulan lama dengan formula yang sudah berbeda tanpa disadari.
+
+**Kind (`direct` / `derived`)**
+Penanda yang menempel di tiap pembacaan komponen Layer 1. `direct` = satu angka dari satu sumber otoritatif (VIX, DXY). `derived` = dikonstruksi sendiri dari kombinasi sumber (Business Cycle Stage, Money Flow, Market Breadth, Market Sentiment). Ada supaya Prinsip #5 ikut mengalir bersama datanya ke Layer 2, bukan berhenti sebagai kalimat di dokumen spec. Lihat `01_ARCHITECTURE/04_DATA_CONTRACTS.md`.
 
 ---
 
@@ -102,6 +109,18 @@ Komponen akhir Layer 2 yang menyusun hasil dari ketiga modul reasoning untuk dit
 
 **Historical Tracking / Decision Journal**
 Mekanisme penyimpanan hasil analisa dari waktu ke waktu, dipakai untuk memvalidasi apakah kesimpulan sistem terbukti akurat di kemudian hari. Sesuai Prinsip #6 (revisi, `02_PRINCIPLES.md`), setiap entri historis harus turut mencatat versi metodologi/formula yang dipakai saat itu, khususnya untuk komponen derived/approximated. Implementasinya boleh menyusul (v2.1) setelah alur inti Screening→Output berjalan — ini pengecualian yang diakui secara eksplisit di Prinsip #6, bukan berarti komponennya kurang penting.
+
+**Fase A / Fase B & Barrier**
+Layer 2 berjalan dua fase, bukan satu alur lurus. **Fase A** (Evidence → Knowledge) berjalan per-ticker dan bisa paralel penuh. **Barrier** adalah titik tunggu sampai Knowledge seluruh kandidat selesai. **Fase B** (Peer → Confidence → Risk → 3 modul → Aggregator) butuh populasi utuh karena Peer membandingkan antar ticker. Barrier ini konsekuensi tak terhindarkan dari memakai populasi hasil screening sendiri sebagai sumber peer — lihat D-03 di `00_Foundation/04_DECISIONS.md`.
+
+**Module Output**
+Bentuk baku hasil tiap modul reasoning: `stance`, `confidence`, `flag_responses`, `context_used`, `knowledge_gaps`. **Identik untuk ketiga modul** — wadah yang seragam justru yang membuat tiga pandangan bisa ditampilkan berdampingan tanpa harus disamakan isinya. Yang wajib berbeda antar modul adalah kriteria dan kesimpulannya, bukan struktur laporannya. Dikunci di `01_ARCHITECTURE/04_DATA_CONTRACTS.md` §6.
+
+**Flag Response**
+Entri wajib di `ModuleOutput` untuk **setiap** flag severity tinggi yang menempel di Knowledge. Berisi `flag_id`, `impact`, dan `rationale` yang spesifik ke flag itu. Inilah yang membuat "wajib direspons" di Prinsip #4 bisa gagal secara mekanis: output yang jumlah flag_response-nya tidak cocok akan ditolak, bukan sekadar dianggap kurang rapi.
+
+**Undetermined (Risk)**
+Status pemeriksaan red flag saat data governance yang dibutuhkan `missing`. Beda tegas dari "tidak ada red flag": yang satu berarti tidak ketemu masalah, yang satu berarti tidak sempat melihat. Modul reasoning berhak tahu yang mana.
 
 ---
 

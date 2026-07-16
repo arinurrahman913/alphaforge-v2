@@ -1,6 +1,7 @@
 # AlphaForge v2 — Piagam (Charter)
 
 **Status:** Aktif
+**Doc version:** 1.1.0
 **Menggantikan:** Tidak ada. v1 (`alphaforge-v1` / `alphaforge-core-v1`) tetap hidup sebagai referensi.
 
 ---
@@ -27,7 +28,7 @@ Membaca kondisi makro dan market secara keseluruhan sebelum satu pun saham diana
 **Layer 2 — Stock Analysis Engine**
 Menyaring seluruh market (NASDAQ + NYSE, bukan watchlist manual), membangun Evidence terverifikasi per saham, menurunkan Knowledge dari evidence itu, melewati Risk/Red-Flag Check (flag serius menempel eksplisit dan wajib direspons ketiga modul — lihat Prinsip #4), lalu dianalisa lewat 3 lensa independen — Multibagger, Quality/Compound, dan Speculative — masing-masing dengan proses reasoning sendiri. Aggregator menampilkan ketiga pandangan berdampingan; tidak menggabungkannya jadi satu verdict.
 
-Spec lengkap tiap komponen ada di `02_LAYER1_SPECS/` dan `03_LAYER2_SPECS/`.
+Spec lengkap tiap komponen ada di `02_LAYER1_SPECS/` dan `03_LAYER2_SPECS/`. Bentuk paket data yang mengalir antar tahap dikunci di `01_ARCHITECTURE/04_DATA_CONTRACTS.md`; keputusan arsitektur beserta alternatif yang ditolak dicatat di `00_Foundation/04_DECISIONS.md`.
 
 ---
 

@@ -1,6 +1,8 @@
 # Commodity Signals
 
-**Status:** Aktif
+**Status:** Aktif — revisi: kind ditambahkan (Prinsip #5)
+**Doc version:** 1.1.0
+**Kind:** direct
 
 ## Definisi
 
@@ -18,9 +20,13 @@ Yahoo Finance — futures (`GC=F` emas, `CL=F` minyak).
 
 Pantau tren harga dan volatilitas komoditas kunci ini.
 
-## Dipakai Oleh
+## Input Dari
 
-Currency/DXY (saling terkait), relevan untuk saham sektor energi/materials di ketiga modul.
+Tidak ada — harga futures langsung dari Yahoo Finance. Komponen leaf, `kind=direct`.
+
+## Digunakan Oleh
+
+Ketiga modul, relevan untuk saham sektor energi/materials.
 
 ---
 

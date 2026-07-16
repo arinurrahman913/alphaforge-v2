@@ -1,0 +1,192 @@
+From b8c2f6ea16888ae7df8207397267a5a6b803bfef Mon Sep 17 00:00:00 2001
+From: AlphaForge <a@b>
+Date: Thu, 16 Jul 2026 16:58:21 +0000
+Subject: [PATCH 6/6] =?UTF-8?q?spec:=20koreksi=20D-13=20=E2=80=94=20reinve?=
+ =?UTF-8?q?stasi=20vs=20erosi=20(gut-check=20MSFT)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Pemilik produk menemukan cacat nyata: kriteria Quality awal menyamakan
+'margin turun karena reinvestasi terdanai kekuatan' dengan 'margin turun
+karena erosi'. Dua situasi yang butuh kesimpulan berlawanan.
+
+- MSFT direvisi: compounding_rapuh -> compounding_kuat (+ limiter siklus
+  reinvestasi). Revenue tetap +18%, Azure re-akselerasi 40%, CapEx 90B
+  dijelaskan eksplisit sebagai kapasitas AI -> lolos tes pembeda.
+  INTC tetap bukan_compounder: rugi di segmen yang BELUM profit + writedown
+  akuisisi gagal -> bukan reinvestasi, menutup lubang.
+- Tes pembeda baru di 08_MODULE_QUALITY_COMPOUND.md, dalam akses field
+  yang sudah ada (bagian 2) -- bukan pelanggaran D-12.
+- Field baru: tren CapEx + alasan terungkap, ditambah ke bagian 2 Knowledge.
+- 05_RESEARCH/ ditandai catatan koreksi, TIDAK ditulis ulang -- jejak
+  'apa ditemukan lebih dulu, apa dikoreksi belakangan' tetap terlihat.
+
+Ini D-13 bekerja sebagaimana mestinya: draft dua penulis, direvisi begitu
+pemilik produk merasa ada yang salah.
+---
+ 00_Foundation/04_DECISIONS.md                 | 12 ++++++++++-
+ 03_LAYER2_SPECS/03_KNOWLEDGE.md               |  4 +++-
+ 03_LAYER2_SPECS/08_MODULE_QUALITY_COMPOUND.md | 20 +++++++++++++------
+ 05_RESEARCH/README.md                         |  4 +++-
+ 05_RESEARCH/kriteria-modul-draft-v1.md        |  4 ++++
+ 05_RESEARCH/tes-20-saham-hasil-grupA.md       |  6 ++++++
+ CHANGELOG.md                                  | 14 +++++++++++++
+ 7 files changed, 55 insertions(+), 9 deletions(-)
+
+diff --git a/00_Foundation/04_DECISIONS.md b/00_Foundation/04_DECISIONS.md
+index 0507381..c362aec 100644
+--- a/00_Foundation/04_DECISIONS.md
++++ b/00_Foundation/04_DECISIONS.md
+@@ -542,10 +542,20 @@ Trajectory butuh dua bahan berbeda sifat: struktur (seberapa besar ruangnya) dan
+ |---|---|---|---|---|
+ | **INTC** | `ruang_tak_terbaca`\* | `bukan_compounder` (GAAP −0.73, foundry loss $2.4B/kuartal, restructuring $4.1B) | `asimetri_berkatalis` (18A ramp, guidance $1.3B di atas konsensus) | `different_fields` |
+ | **PG** | `ruang_tertutup` (organic +3%, kategori mapan) | `compounding_kuat` (FCF productivity 82%, dividen 70 tahun) | `tanpa_asimetri` | `different_fields`, tapi ketiganya searah negatif-untuk-multibagger |
+-| **MSFT** | `ruang_sempit` (Azure +40%, tapi sudah di-price) | `compounding_rapuh` (GM 67.6% tersempit sejak 2022, capex naik 61% dengan $25M cuma inflasi komponen) | `asimetri_berkatalis` (restrukturisasi OpenAI, capex $3.4B di bawah konsensus) | `different_fields` |
++| **MSFT** | `ruang_sempit` (Azure +40%, tapi sudah di-price) | `compounding_kuat` — *direvisi dari `compounding_rapuh`, lihat koreksi di bawah* (GM 67.6% tersempit sejak 2022, tapi revenue tetap +18% dan CapEx $190B dijelaskan eksplisit sebagai kapasitas AI — lolos tes reinvestasi-vs-erosi) | `asimetri_berkatalis` (restrukturisasi OpenAI, capex $3.4B di bawah konsensus) | `different_fields` |
+ 
+ \*Revisi dari klaim sebelumnya (`ruang_terbuka`) — di bawah kriteria trajectory, external foundry $174M dari basis nyaris nol bukan kurva yang sudah kelihatan.
+ 
++### Koreksi 16 Juli (lanjutan) — Reinvestasi ≠ Erosi
++
++Gut-check pemilik produk terhadap MSFT: kriteria Quality awal (*"margin/FCF turun → `compounding_rapuh`"*) tidak membedakan **margin turun karena reinvestasi terdanai kekuatan** dari **margin turun karena erosi**. MSFT jatuh di kategori pertama — revenue tetap +18%, Azure re-akselerasi ke 40%, CapEx $190B dijelaskan eksplisit sebagai kapasitas AI di filing — dan seharusnya `compounding_kuat`, bukan `compounding_rapuh`.
++
++**Tes pembeda yang ditambahkan** (di `03_LAYER2_SPECS/08_MODULE_QUALITY_COMPOUND.md`): sebelum menilai arah margin, cek apakah penurunan didanai kekuatan (revenue tetap kuat, level margin/FCF absolut masih tinggi, CapEx naik dengan alasan terungkap di filing) atau tanda erosi (revenue ikut melambat, tidak ada penjelasan, atau kerugian di segmen yang seharusnya sudah profit).
++
++**Field baru:** tren CapEx (nominal & % revenue, beserta alasan terungkap kalau ada) ditambahkan ke bagian 2 Knowledge (`03_KNOWLEDGE.md`) — dibutuhkan supaya tes pembeda ini bisa dijalankan. Bukan pelanggaran D-12: field ini tetap di bagian 2, yang sudah jadi akses penuh Quality; bukan field baru dari 3b yang dilarang.
++
++**Ini contoh D-13 bekerja sebagaimana mestinya** — draft komitmen dua penulis, direvisi begitu pemilik produk merasa ada yang salah, bukan dipertahankan karena sudah tertulis rapi. Pembalikan verdict MSFT juga mengubah pola `synthesis`-nya: sebelumnya PG dan MSFT sama-sama 3-label-berbeda (bukti utama D-14 soal `surprise`); dengan MSFT sekarang `ruang_sempit`+`compounding_kuat`+`asimetri_berkatalis`, agreement baru muncul secara implisit antara Multibagger dan Quality (dua-duanya condong positif), sementara Speculative sendirian menyoal katalis. Argumen inti D-14 (jumlah divergensi ≠ informasi) tetap berdiri — cuma contoh angkanya perlu dihitung ulang begitu kriteria final dipakai ke populasi sungguhan, bukan tiga kasus manual.
++
+ **Temuan penting dari pembuktian ini, bukan cuma dari kriterianya:** PG dan MSFT sama-sama menghasilkan 3 label berbeda — skor "jumlah divergensi" identik. Tapi PG bisa ditebak sepenuhnya dari satu lensa (sepakat implisit); MSFT tidak bisa. **Jumlah label berbeda bukan ukuran informasi — yang ukuran informasi adalah seberapa tidak terduga kombinasinya dibanding populasi.** Ini melahirkan D-14.
+ 
+ ### Yang Belum Diuji
+diff --git a/03_LAYER2_SPECS/03_KNOWLEDGE.md b/03_LAYER2_SPECS/03_KNOWLEDGE.md
+index 5c7cefc..6397834 100644
+--- a/03_LAYER2_SPECS/03_KNOWLEDGE.md
++++ b/03_LAYER2_SPECS/03_KNOWLEDGE.md
+@@ -36,7 +36,9 @@ Profil per ticker, lima bagian tetap (field kosong ditandai `null` + status `mis
+ 
+ **1. Identitas & Klasifikasi** — ticker, exchange, sektor/industri, tier ukuran (dari flag Screening: micro/small/mid/large-cap), status instrumen (mis. `adr`, `recent_ipo` — diteruskan apa adanya dari flag Screening).
+ 
+-**2. Kesehatan Finansial** — tren revenue (YoY 4 kuartal terakhir, CAGR 3 & 5 tahun kalau data cukup), tren margin (gross/operating/net, per kuartal), struktur balance sheet (debt-to-equity, current ratio, posisi kas), tren cash flow (FCF per kuartal, FCF margin).
++**2. Kesehatan Finansial** — tren revenue (YoY 4 kuartal terakhir, CAGR 3 & 5 tahun kalau data cukup), tren margin (gross/operating/net, per kuartal), struktur balance sheet (debt-to-equity, current ratio, posisi kas), tren cash flow (FCF per kuartal, FCF margin), **tren CapEx (nominal & sebagai % revenue, beserta alasan yang diungkapkan manajemen kalau ada di filing/rilis — mis. "kapasitas AI" vs tanpa penjelasan)**.
++
++> Field CapEx ditambahkan setelah koreksi D-13 (16 Juli): tanpa ini, Quality tidak bisa membedakan margin turun karena *reinvestasi terdanai* dari margin turun karena *erosi* — dua situasi yang butuh kesimpulan berlawanan.
+ 
+ **3a. Posisi Kompetitif — Struktur (D-13)** — kategori model bisnis kalau bisa ditentukan dari data (mis. subscription/hardware/marketplace), konsentrasi revenue per segmen bisnis (dari 10-K kalau tersedia), skala absolut (revenue TTM, jumlah karyawan kalau ada), estimasi ukuran TAM kalau tersedia dari filing/riset pihak ketiga yang dikutip perusahaan.
+ 
+diff --git a/03_LAYER2_SPECS/08_MODULE_QUALITY_COMPOUND.md b/03_LAYER2_SPECS/08_MODULE_QUALITY_COMPOUND.md
+index 193cc77..9c6b689 100644
+--- a/03_LAYER2_SPECS/08_MODULE_QUALITY_COMPOUND.md
++++ b/03_LAYER2_SPECS/08_MODULE_QUALITY_COMPOUND.md
+@@ -1,7 +1,7 @@
+ # Module — Quality / Compound
+ 
+ **Status:** Aktif — revisi: kontrak output & aturan validasi flag ditambahkan (D-04)
+-**Doc version:** 3.0.0
++**Doc version:** 3.1.0
+ 
+ ## Definisi
+ 
+@@ -55,14 +55,22 @@ Aturan validasi yang berlaku ke modul ini (output **ditolak** kalau gagal):
+ 
+ **Kenapa tidak boleh membaca 3b (momentum) atau `CatalystSet`:** mesin yang awet tidak perlu sedang berakselerasi untuk dianggap awet. Kalau Quality boleh melihat momentum, ia perlahan tergoda mengandalkannya dan menempel ke Multibagger — dua lensa jadi satu lensa berbaju dua (D-12).
+ 
++### Koreksi (16 Juli, gut-check pemilik produk): Reinvestasi ≠ Erosi
++
++Versi awal: *"margin/FCF mulai turun → `compounding_rapuh`"*, tanpa peduli **kenapa** turunnya. Itu salah, dan kasus MSFT yang membuktikannya — margin turun karena CapEx $190B buat kapasitas AI, bukan karena kalah bersaing. Revenue tetap +18%, Azure re-akselerasi ke 40%, FCF masih deras cuma lagi ketutup investasi. Itu mesin yang lagi nambah bahan bakar, bukan mesin yang bocor. Kriteria lama tidak membedakan itu dari INTC, yang rugi $2.4B di segmen yang **memang belum profit** plus writedown $4.1B mengakui akuisisi lama gagal — situasi yang secara kategori berbeda.
++
++**Tes pembeda, sebelum menilai arah margin:** apakah penurunan margin **didanai kekuatan** (revenue tetap kuat/berakselerasi, level margin & FCF absolut masih jauh di atas ambang gagal, CapEx naik dengan alasan terungkap di filing) — atau **tanda erosi** (revenue ikut melambat/turun, tidak ada penjelasan reinvestasi, atau kerugian di segmen yang seharusnya sudah profit)?
++
+ | Stance | Syarat |
+ |---|---|
+-| `compounding_kuat` | Margin (gross/operating) stabil atau naik N periode terakhir · FCF positif berturut · konsentrasi revenue di bawah ambang · percentile margin peer di atas median · tanpa flag governance severity tinggi yang belum direspons |
+-| `compounding_rapuh` | Margin/FCF mulai turun, tapi 3a (model bisnis, posisi kompetitif) masih utuh — mesin melambat, belum berubah bentuk |
+-| `bukan_compounder` | Kerugian struktural di bisnis inti, atau restatement, atau margin & FCF negatif bersamaan — mesin sudah jadi mesin lain |
+-| `mesin_tak_terbaca` | Field kunci di 2/3a/7 `missing` melewati ambang |
++| `compounding_kuat` | Margin stabil/naik, **ATAU** margin turun tapi revenue tetap kuat/berakselerasi **dan** level margin & FCF absolut masih tinggi **dan** penurunan dijelaskan CapEx/reinvestasi terungkap (bukan tekanan biaya/kompetisi) · FCF positif berturut · konsentrasi revenue di bawah ambang · percentile margin peer di atas median · tanpa flag governance severity tinggi. Kalau masuk lewat jalur reinvestasi, tempelkan `limiter: "margin tertekan siklus reinvestasi — pantau apakah revenue/margin pulih dalam N kuartal"` |
++| `compounding_rapuh` | Margin/FCF turun **dan** revenue ikut melambat/flat, **atau** penurunan tidak dijelaskan CapEx/reinvestasi — tanda erosi, bukan investasi terencana. 3a (model bisnis, posisi kompetitif) masih utuh |
++| `bukan_compounder` | Kerugian struktural di segmen yang seharusnya sudah profit, atau restatement, atau margin & FCF negatif bersamaan tanpa penjelasan reinvestasi — mesin sudah jadi mesin lain |
++| `mesin_tak_terbaca` | Field kunci di 2/3a/7 `missing` melewati ambang, termasuk kalau alasan CapEx tidak terungkap di filing (tidak bisa menjalankan tes pembeda) |
++
++**Draft komitmen v2, diuji ke 3 kasus, direvisi 16 Juli setelah gut-check:** PG → `compounding_kuat` (FCF productivity 82%, dividen naik 70 tahun berturut). INTC → `bukan_compounder` (foundry operating loss $2.4B/kuartal di segmen yang belum profit, restructuring $4.1B mengakui akuisisi gagal — bukan reinvestasi, tapi menutup lubang). **MSFT → `compounding_kuat` (revisi dari `compounding_rapuh`)** — GM 67.6% memang tersempit sejak 2022, tapi revenue tetap +18% dan CapEx $190B dijelaskan eksplisit sebagai kapasitas AI di filing. Lolos tes pembeda: didanai kekuatan, bukan tanda erosi. Ditempeli `limiter: "margin tertekan siklus reinvestasi AI — pantau pemulihan margin 3-4 kuartal ke depan"`.
+ 
+-**Draft komitmen pertama, diuji ke 3 kasus (D-13):** PG → `compounding_kuat` (FCF productivity 82%, dividen naik 70 tahun berturut). INTC → `bukan_compounder` (GAAP EPS −0.73, foundry operating loss $2.4B/kuartal, restructuring $4.1B). **MSFT → `compounding_rapuh`** — GM 67.6% tersempit sejak 2022, capex kalender 2026 naik 61% dengan $25B dari itu murni inflasi harga komponen (bukan kapasitas tambahan). Diambil **tanpa pernah melihat Azure +40%** (itu 3b) — pembuktian langsung bahwa D-12 menghasilkan stance yang berbeda dari kalau semua field dibuka.
++Ini tetap **tanpa pernah melihat Azure +40%** (itu 3b, tetap tidak diakses) — koreksinya bukan membuka akses field baru, tapi memperbaiki *bagaimana* field yang sudah diakses (bagian 2: revenue growth, CapEx beserta alasannya) dipakai menilai arah margin.
+ 
+ Kosakata ini **tidak dipakai modul lain dan tidak bisa dipetakan ke kosakata modul lain** — pemetaan semacam itu dilarang dibuat (D-09). Versi sebelumnya memakai satu enum bersama (`compelling/interesting/weak`) untuk ketiga modul; itu skala ordinal yang langsung berubah jadi hitungan suara di kepala pembaca.
+ 
+diff --git a/05_RESEARCH/README.md b/05_RESEARCH/README.md
+index 7195d9f..5fbfa8b 100644
+--- a/05_RESEARCH/README.md
++++ b/05_RESEARCH/README.md
+@@ -6,6 +6,8 @@ Folder ini bukan spec — ini bukti kerja yang menghasilkan D-12, D-13, D-14 di
+ 2. `tes-20-saham-hasil-grupA.md` — PG & MSFT, temuan yang membongkar metrik "jumlah divergensi" (→ D-14)
+ 3. `kriteria-modul-draft-v1.md` — draft kriteria dua-penulis yang jadi dasar D-13
+ 
+-**Status semua isi folder ini: draft kerja, bukan final.** Ambang numerik di dalamnya belum diuji ke populasi luas — cuma ke 3 saham. Kalau direvisi, revisi di sini dan di D-13, jangan cuma di salah satu.
++**Status semua isi folder ini: draft kerja, bukan final.** Ambang numerik di dalamnya belum diuji ke populasi luas — cuma ke 3 saham.
++
++**16 Juli — koreksi pertama sudah terjadi.** Verdict MSFT (`compounding_rapuh`) di dua file di atas dikoreksi jadi `compounding_kuat` setelah gut-check pemilik produk menemukan kriteria lama tidak membedakan margin turun karena reinvestasi dari margin turun karena erosi. File di folder ini **tidak ditulis ulang** — ditandai dengan catatan koreksi di bagian atas, supaya kronologi "apa yang ditemukan lebih dulu, apa yang dikoreksi belakangan" tetap terlihat. Sumber kebenaran saat ini selalu di `00_Foundation/04_DECISIONS.md` dan spec modul terkait, bukan di folder ini.
+ 
+ © AlphaForge v2
+diff --git a/05_RESEARCH/kriteria-modul-draft-v1.md b/05_RESEARCH/kriteria-modul-draft-v1.md
+index ccf9c7f..7e1734c 100644
+--- a/05_RESEARCH/kriteria-modul-draft-v1.md
++++ b/05_RESEARCH/kriteria-modul-draft-v1.md
+@@ -6,6 +6,10 @@
+ 
+ ---
+ 
++> **⚠ KOREKSI 16 Juli (setelah dokumen ini ditulis):** tabel kriteria Quality di bawah **sudah digantikan** versi yang membedakan reinvestasi vs erosi — lihat `03_LAYER2_SPECS/08_MODULE_QUALITY_COMPOUND.md` untuk tabel final dan `00_Foundation/04_DECISIONS.md` D-13 untuk kronologi koreksinya. Verdict MSFT di dokumen ini (`compounding_rapuh`) sudah tidak berlaku — direvisi jadi `compounding_kuat`. Dibiarkan apa adanya sebagai jejak draft pertama.
++
++---
++
+ ## 0. Ini Sekarang Punya Siapa
+ 
+ Kamu bilang "percayakan ke saya sebagai arsitek." Saya kerjakan — tapi harus jujur soal apa artinya itu.
+diff --git a/05_RESEARCH/tes-20-saham-hasil-grupA.md b/05_RESEARCH/tes-20-saham-hasil-grupA.md
+index 8571623..fb5aa1b 100644
+--- a/05_RESEARCH/tes-20-saham-hasil-grupA.md
++++ b/05_RESEARCH/tes-20-saham-hasil-grupA.md
+@@ -6,6 +6,12 @@
+ 
+ ---
+ 
++> **⚠ KOREKSI 16 Juli (setelah dokumen ini ditulis):** verdict `compounding_rapuh` untuk MSFT di bawah **direvisi jadi `compounding_kuat`** setelah gut-check pemilik produk. Kriteria awal tidak membedakan margin turun karena reinvestasi terdanai kekuatan (kasus MSFT — revenue tetap +18%, CapEx dijelaskan eksplisit sebagai kapasitas AI) dari margin turun karena erosi (kasus INTC — rugi di segmen yang belum profit). Detail koreksi & tes pembeda baru: `00_Foundation/04_DECISIONS.md` D-13, dan `03_LAYER2_SPECS/08_MODULE_QUALITY_COMPOUND.md`. Isi asli di bawah **dibiarkan apa adanya** sebagai jejak — ini yang ditemukan sebelum koreksi, bukan kesimpulan final.
++>
++> Argumen inti dokumen ini (§3: jumlah divergensi ≠ informasi, lahirnya metrik `surprise`) **tetap berdiri** — cuma verdict MSFT-nya yang berubah.
++
++---
++
+ ## 0. Ringkasan
+ 
+ Dugaan saya di draft: *"bahkan dengan akses field dibatasi, grup A tetap akan sepakat."*
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 620df32..30fa378 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -31,6 +31,20 @@ Penggantinya: `surprise(ticker) = −log P(kombinasi stance | populasi sesi ini)
+ 
+ ---
+ 
++## 2026-07-16 (lanjutan) — Koreksi D-13: Reinvestasi ≠ Erosi
++
++Gut-check pemilik produk terhadap verdict MSFT (`compounding_rapuh`) menemukan cacat nyata: kriteria Quality awal menyamakan "margin turun karena reinvestasi terdanai kekuatan" dengan "margin turun karena erosi". Dua situasi yang butuh kesimpulan berlawanan.
++
++- **MSFT direvisi:** `compounding_rapuh` → **`compounding_kuat`** (dengan limiter siklus reinvestasi). Revenue tetap +18%, Azure re-akselerasi 40%, CapEx $190B dijelaskan eksplisit sebagai kapasitas AI di filing — lolos tes pembeda. INTC tetap `bukan_compounder`: rugi $2.4B di segmen yang **belum profit**, plus writedown $4.1B mengakui akuisisi gagal — bukan reinvestasi, menutup lubang.
++- **Tes pembeda ditambahkan** ke `08_MODULE_QUALITY_COMPOUND.md`: sebelum menilai arah margin, cek revenue tetap kuat + level margin/FCF absolut masih tinggi + CapEx dijelaskan di filing (→ tetap `compounding_kuat`) vs revenue ikut melambat + tanpa penjelasan (→ `compounding_rapuh`/`bukan_compounder`).
++- **Field baru:** tren CapEx (nominal, % revenue, alasan terungkap) ditambahkan ke bagian 2 Knowledge — dalam akses Quality yang sudah ada, bukan pelanggaran D-12.
++- `05_RESEARCH/` **tidak ditulis ulang** — ditandai catatan koreksi di bagian atas file terkait, supaya jejak "apa yang ditemukan lebih dulu" tetap terlihat.
++- Argumen inti D-14 (jumlah divergensi ≠ informasi) tetap berdiri; angka `surprise` di contoh perlu dihitung ulang begitu kriteria dijalankan ke populasi sungguhan.
++
++**Ini D-13 bekerja sebagaimana mestinya:** draft dua penulis, direvisi begitu pemilik produk merasa ada yang salah — bukan dipertahankan karena sudah tertulis rapi.
++
++---
++
+ ## 2026-07-16 — Dashboard Lokal (D-06, D-07)
+ 
+ Rombakan lapisan tampilan. Pemicunya: transparansi — hasil keluar, tapi angka & alasan di baliknya tidak kelihatan.
+-- 
+2.43.0
+

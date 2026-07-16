@@ -1,0 +1,1884 @@
+From 9d72d68e8f88dfccb073b9d3942c8dee6cbded56 Mon Sep 17 00:00:00 2001
+From: AlphaForge <a@b>
+Date: Thu, 16 Jul 2026 07:01:11 +0000
+Subject: [PATCH 1/6] spec: revisi konsistensi struktural (D-01..D-05)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- D-01 Risk baca Knowledge saja; Knowledge bagian 7 (Governance & Peristiwa Filing)
+- D-02 Knowledge bagian 6 (Valuasi) — sebelumnya dicontohkan tapi tak punya slot
+- D-03 putus lingkaran Knowledge<->Peer; pipeline dua fase + barrier eksplisit
+- D-04 kontrak data formal + aturan validasi V1-V5 + tes independensi T1/T2
+- D-05 Market Breadth atas universe sendiri (konstituen S&P 500 berlisensi)
+
+Baru: 00_Foundation/04_DECISIONS.md, 01_ARCHITECTURE/04_DATA_CONTRACTS.md, CHANGELOG.md
+Lainnya: DAG Layer 1 (11 leaf + 1 composite), konvensi Doc/Method version + kind,
+standar scraping, Historical Tracking simpan-vs-evaluasi, README disinkronkan.
+---
+ 00_Foundation/01_CHARTER.md                   |   3 +-
+ 00_Foundation/02_PRINCIPLES.md                |  11 +-
+ 00_Foundation/03_GLOSSARY.md                  |  21 +-
+ 00_Foundation/04_DECISIONS.md                 | 171 +++++++++++++
+ 01_ARCHITECTURE/01_SYSTEM_OVERVIEW.md         |  16 +-
+ 01_ARCHITECTURE/02_LAYER1_MARKET_CONTEXT.md   |  51 +++-
+ 01_ARCHITECTURE/03_LAYER2_STOCK_ANALYSIS.md   |  67 +++--
+ 01_ARCHITECTURE/04_DATA_CONTRACTS.md          | 242 ++++++++++++++++++
+ 02_LAYER1_SPECS/01_BUSINESS_CYCLE_STAGE.md    |  15 +-
+ 02_LAYER1_SPECS/02_SECTOR_ROTATION.md         |  14 +-
+ 02_LAYER1_SPECS/03_MONEY_FLOW.md              |  15 +-
+ 02_LAYER1_SPECS/04_LIQUIDITY_CONDITIONS.md    |  12 +-
+ 02_LAYER1_SPECS/05_YIELD_CURVE.md             |  12 +-
+ 02_LAYER1_SPECS/06_MARKET_BREADTH.md          |  39 ++-
+ 02_LAYER1_SPECS/07_VOLATILITY_INDEX.md        |  12 +-
+ 02_LAYER1_SPECS/08_MARKET_REGIME.md           |  14 +-
+ 02_LAYER1_SPECS/09_MACRO_CALENDAR.md          |  10 +-
+ 02_LAYER1_SPECS/10_CURRENCY_DXY.md            |  12 +-
+ 02_LAYER1_SPECS/11_COMMODITY_SIGNALS.md       |  12 +-
+ 02_LAYER1_SPECS/12_MARKET_SENTIMENT.md        |  22 +-
+ 03_LAYER2_SPECS/03_KNOWLEDGE.md               |  41 ++-
+ 03_LAYER2_SPECS/04_RISK_REDFLAG_CHECK.md      |  49 +++-
+ .../06_PEER_RELATIVE_COMPARISON.md            |  67 ++++-
+ 03_LAYER2_SPECS/07_MODULE_MULTIBAGGER.md      |  27 +-
+ 03_LAYER2_SPECS/08_MODULE_QUALITY_COMPOUND.md |  27 +-
+ 03_LAYER2_SPECS/09_MODULE_SPECULATIVE.md      |  27 +-
+ 03_LAYER2_SPECS/11_AGGREGATOR_OUTPUT.md       |  31 ++-
+ .../12_HISTORICAL_TRACKING_JOURNAL.md         |  36 ++-
+ 04_DATA_SOURCES/01_PROVIDERS_OVERVIEW.md      |  29 ++-
+ CHANGELOG.md                                  |  41 +++
+ README.md                                     |  25 +-
+ 31 files changed, 1067 insertions(+), 104 deletions(-)
+ create mode 100644 00_Foundation/04_DECISIONS.md
+ create mode 100644 01_ARCHITECTURE/04_DATA_CONTRACTS.md
+ create mode 100644 CHANGELOG.md
+
+diff --git a/00_Foundation/01_CHARTER.md b/00_Foundation/01_CHARTER.md
+index 8972e1a..2dea4be 100644
+--- a/00_Foundation/01_CHARTER.md
++++ b/00_Foundation/01_CHARTER.md
+@@ -1,6 +1,7 @@
+ # AlphaForge v2 — Piagam (Charter)
+ 
+ **Status:** Aktif
++**Doc version:** 1.1.0
+ **Menggantikan:** Tidak ada. v1 (`alphaforge-v1` / `alphaforge-core-v1`) tetap hidup sebagai referensi.
+ 
+ ---
+@@ -27,7 +28,7 @@ Membaca kondisi makro dan market secara keseluruhan sebelum satu pun saham diana
+ **Layer 2 — Stock Analysis Engine**
+ Menyaring seluruh market (NASDAQ + NYSE, bukan watchlist manual), membangun Evidence terverifikasi per saham, menurunkan Knowledge dari evidence itu, melewati Risk/Red-Flag Check (flag serius menempel eksplisit dan wajib direspons ketiga modul — lihat Prinsip #4), lalu dianalisa lewat 3 lensa independen — Multibagger, Quality/Compound, dan Speculative — masing-masing dengan proses reasoning sendiri. Aggregator menampilkan ketiga pandangan berdampingan; tidak menggabungkannya jadi satu verdict.
+ 
+-Spec lengkap tiap komponen ada di `02_LAYER1_SPECS/` dan `03_LAYER2_SPECS/`.
++Spec lengkap tiap komponen ada di `02_LAYER1_SPECS/` dan `03_LAYER2_SPECS/`. Bentuk paket data yang mengalir antar tahap dikunci di `01_ARCHITECTURE/04_DATA_CONTRACTS.md`; keputusan arsitektur beserta alternatif yang ditolak dicatat di `00_Foundation/04_DECISIONS.md`.
+ 
+ ---
+ 
+diff --git a/00_Foundation/02_PRINCIPLES.md b/00_Foundation/02_PRINCIPLES.md
+index 474cdcc..868734e 100644
+--- a/00_Foundation/02_PRINCIPLES.md
++++ b/00_Foundation/02_PRINCIPLES.md
+@@ -1,8 +1,9 @@
+ # AlphaForge v2 — Prinsip
+ 
+ **Status:** Aktif — revisi untuk konsistensi dengan spec turunan (lihat catatan di Prinsip #4, #5, #6)
++**Doc version:** 1.2.0
+ 
+-Dokumen ini adalah aturan main yang berlaku di semua layer dan modul. Kalau ada keputusan desain yang bertentangan dengan salah satu prinsip di bawah, prinsip ini yang menang, kecuali pengecualian yang secara eksplisit dicatat di prinsip terkait (lihat Prinsip #6).
++Dokumen ini adalah aturan main yang berlaku di semua layer dan modul. Keputusan desain yang diambil di bawah prinsip-prinsip ini — beserta alternatif yang ditolak — dicatat di `04_DECISIONS.md`. Kalau ada keputusan desain yang bertentangan dengan salah satu prinsip di bawah, prinsip ini yang menang, kecuali pengecualian yang secara eksplisit dicatat di prinsip terkait (lihat Prinsip #6).
+ 
+ ---
+ 
+@@ -20,12 +21,16 @@ Satu saham bisa punya profil yang berbeda tergantung kacamata investasi yang dip
+ 
+ "Independen" di sini bukan sekadar klaim konseptual, tapi syarat teknis minimum: ketiga modul menerima input yang sama (Knowledge + Market Context Package), tidak saling memanggil, tidak berbagi state satu sama lain dalam satu sesi analisa, dan urutan eksekusinya tidak boleh mempengaruhi hasil modul lain. Kalau implementasi nanti membuat ketiganya berbagi komponen (misalnya prompt/template reasoning yang sama), komponen bersama itu harus dipastikan tidak diam-diam menyamakan kesimpulan ketiganya — kalau itu terjadi, Multi-Lens jadi klaim di atas kertas saja.
+ 
++Syarat teknis di atas sekarang punya cara dicek, bukan cuma dinyatakan: tes **T1** (urutan eksekusi acak → output harus identik) dan **T2** (konvergensi stance >90% → wajib review) di `01_ARCHITECTURE/04_DATA_CONTRACTS.md` §6.
++
+ ## 4. Risk Adalah Gerbang, Bukan Sekadar Skor
+ 
+ Red flag serius (masalah akuntansi, governance, litigasi) bukan salah satu dari banyak faktor yang dirata-rata ke dalam skor. "Gerbang" di sini berarti **red flag serius wajib menempel eksplisit dan terlihat oleh ketiga modul reasoning sebelum mereka menyimpulkan apa pun** — bukan tenggelam sebagai satu dari banyak input yang dirata-rata secara diam-diam.
+ 
+ Ini bukan berarti proses berhenti begitu ada red flag. Saham tetap diproses sampai ke tiga modul reasoning; yang tidak boleh terjadi adalah modul reasoning menyimpulkan tanpa mempertimbangkan red flag itu. Implementasinya: flag menempel ke Knowledge dan wajib direspons eksplisit oleh tiap modul (misalnya lewat pembatasan confidence atau catatan reasoning), bukan sekadar disediakan sebagai data yang boleh diabaikan.
+ 
++"Wajib" di sini ditegakkan secara mekanis, bukan diharapkan: output modul yang jumlah `flag_responses`-nya tidak cocok dengan jumlah flag severity tinggi **ditolak** (aturan V1), dan rationale yang identik untuk dua flag berbeda ditandai untuk review (V2). Lihat `01_ARCHITECTURE/04_DATA_CONTRACTS.md` §6. Prinsip yang tidak bisa gagal secara mekanis akan pelan-pelan jadi hiasan.
++
+ Pengecualian: kasus yang sudah terkonfirmasi sangat berat (misalnya fraud yang telah terbukti/diputuskan otoritas berwenang, delisting resmi) boleh menghentikan proses lebih awal di Risk/Red-Flag Check — tapi ini kasus khusus, bukan perilaku default gerbang ini. Detail ambang mana yang menghentikan proses vs. yang hanya menempel sebagai flag didefinisikan di `03_LAYER2_SPECS/04_RISK_REDFLAG_CHECK.md`.
+ 
+ ## 5. Confidence Itu Eksplisit
+@@ -34,13 +39,15 @@ Setiap kesimpulan **tentang saham individual** (Knowledge, hasil tiga modul reas
+ 
+ Komponen Layer 1 yang sifatnya derived/approximated (Business Cycle Stage, Money Flow, Market Sentiment — lihat `04_DATA_SOURCES/01_PROVIDERS_OVERVIEW.md`) tunduk pada semangat prinsip yang sama meski belum punya skor formal: setiap komponen begini harus secara eksplisit menyatakan dirinya sebagai pembacaan yang dikonstruksi/didekati, bukan angka resmi tunggal dari satu sumber otoritatif — supaya Layer 2 dan pengguna tidak keliru menganggapnya sekuat data langsung seperti VIX atau DXY.
+ 
++Sejak revisi kontrak data, pernyataan ini tidak lagi berhenti di dokumen: field `kind` (`direct`/`derived`) menempel di tiap `ComponentReading` dan ikut mengalir ke Layer 2, sehingga modul reasoning bisa memperlakukan keduanya berbeda secara programatis.
++
+ ## 6. Sistem Harus Bisa Diaudit ke Belakang
+ 
+ Kesimpulan yang dihasilkan hari ini harus bisa dicek ulang di masa depan terhadap apa yang benar-benar terjadi. Tanpa histori yang terlacak, tidak ada cara membuktikan apakah reasoning-nya benar-benar akurat atau sekadar terdengar meyakinkan.
+ 
+ Setiap entri historis yang disimpan (lihat `03_LAYER2_SPECS/12_HISTORICAL_TRACKING_JOURNAL.md`) juga harus mencatat **versi metodologi/formula** yang dipakai saat kesimpulan itu dibuat — terutama untuk komponen derived/approximated yang logikanya bisa berubah seiring iterasi (lihat Prinsip #5). Tanpa ini, audit di masa depan berisiko membandingkan kesimpulan lama dengan formula yang sudah berbeda tanpa disadari, dan validitas perbandingannya jadi bias.
+ 
+-**Pengecualian yang diakui secara sadar:** mekanisme Historical Tracking/Decision Journal sendiri boleh diimplementasikan belakangan (v2.1), setelah alur inti Screening→Output berjalan. Ini satu-satunya pengecualian eksplisit terhadap aturan "prinsip selalu menang atas keputusan desain" di dokumen ini — ditulis di sini secara sadar, bukan dibiarkan jadi kontradiksi implisit dengan status "Aktif" yang dipakai prinsip-prinsip lain.
++**Pengecualian yang diakui secara sadar:** **evaluasi** Historical Tracking/Decision Journal boleh menyusul (v2.1), setelah alur inti Screening→Output berjalan. **Penyimpanan** snapshot-nya tidak ikut ditunda — ia jalan sejak v2.0, karena biayanya mendekati nol dan tanpanya v2.1 tidak punya apa-apa untuk dievaluasi. Menunda keduanya berarti jam pembuktian baru mulai berjalan berbulan-bulan setelah klaim "v2 lebih baik dari v1" dibuat. Ini satu-satunya pengecualian eksplisit terhadap aturan "prinsip selalu menang atas keputusan desain" di dokumen ini — ditulis di sini secara sadar, bukan dibiarkan jadi kontradiksi implisit dengan status "Aktif" yang dipakai prinsip-prinsip lain.
+ 
+ ## 7. Gratis Dulu, Berbayar Belakangan
+ 
+diff --git a/00_Foundation/03_GLOSSARY.md b/00_Foundation/03_GLOSSARY.md
+index 7f23539..37286e5 100644
+--- a/00_Foundation/03_GLOSSARY.md
++++ b/00_Foundation/03_GLOSSARY.md
+@@ -1,6 +1,7 @@
+ # AlphaForge v2 — Glosarium
+ 
+-**Status:** Aktif — revisi untuk kelengkapan cakupan & konsistensi dengan `02_PRINCIPLES.md`
++**Status:** Aktif — revisi: istilah dari kontrak data & keputusan D-01..D-05 ditambahkan
++**Doc version:** 1.2.0
+ 
+ Istilah-istilah kunci yang dipakai konsisten di seluruh dokumen AlphaForge v2. Disusun per kelompok: konsep fondasi, istilah Layer 1, istilah Layer 2.
+ 
+@@ -14,6 +15,12 @@ Kumpulan hasil dari 12 komponen Layer 1, digabung jadi satu paket konteks yang d
+ **Derived/Approximated Data**
+ Data yang tidak tersedia lewat satu API siap pakai, tapi dikonstruksi dari kombinasi beberapa sumber data mentah gratis (misal Business Cycle Stage, Money Flow, Market Sentiment). Sesuai Prinsip #5 (`02_PRINCIPLES.md`), komponen berkategori ini wajib secara eksplisit menyatakan dirinya sebagai pembacaan yang dikonstruksi/didekati — bukan angka resmi tunggal dari satu sumber otoritatif — supaya tidak keliru dianggap sekuat data langsung seperti VIX atau DXY.
+ 
++**Method Version**
++Versi *formula* sebuah komponen (semver), beda dari versi dokumennya. Wajib untuk komponen derived/approximated, dan wajib ikut tercatat di tiap entri Historical Tracking (Prinsip #6). Perubahan logika yang mengubah hasil wajib menaikkannya — tanpa ini, audit di masa depan bisa membandingkan kesimpulan lama dengan formula yang sudah berbeda tanpa disadari.
++
++**Kind (`direct` / `derived`)**
++Penanda yang menempel di tiap pembacaan komponen Layer 1. `direct` = satu angka dari satu sumber otoritatif (VIX, DXY). `derived` = dikonstruksi sendiri dari kombinasi sumber (Business Cycle Stage, Money Flow, Market Breadth, Market Sentiment). Ada supaya Prinsip #5 ikut mengalir bersama datanya ke Layer 2, bukan berhenti sebagai kalimat di dokumen spec. Lihat `01_ARCHITECTURE/04_DATA_CONTRACTS.md`.
++
+ ---
+ 
+ ## Istilah Layer 1 — Market Context Engine
+@@ -103,6 +110,18 @@ Komponen akhir Layer 2 yang menyusun hasil dari ketiga modul reasoning untuk dit
+ **Historical Tracking / Decision Journal**
+ Mekanisme penyimpanan hasil analisa dari waktu ke waktu, dipakai untuk memvalidasi apakah kesimpulan sistem terbukti akurat di kemudian hari. Sesuai Prinsip #6 (revisi, `02_PRINCIPLES.md`), setiap entri historis harus turut mencatat versi metodologi/formula yang dipakai saat itu, khususnya untuk komponen derived/approximated. Implementasinya boleh menyusul (v2.1) setelah alur inti Screening→Output berjalan — ini pengecualian yang diakui secara eksplisit di Prinsip #6, bukan berarti komponennya kurang penting.
+ 
++**Fase A / Fase B & Barrier**
++Layer 2 berjalan dua fase, bukan satu alur lurus. **Fase A** (Evidence → Knowledge) berjalan per-ticker dan bisa paralel penuh. **Barrier** adalah titik tunggu sampai Knowledge seluruh kandidat selesai. **Fase B** (Peer → Confidence → Risk → 3 modul → Aggregator) butuh populasi utuh karena Peer membandingkan antar ticker. Barrier ini konsekuensi tak terhindarkan dari memakai populasi hasil screening sendiri sebagai sumber peer — lihat D-03 di `00_Foundation/04_DECISIONS.md`.
++
++**Module Output**
++Bentuk baku hasil tiap modul reasoning: `stance`, `confidence`, `flag_responses`, `context_used`, `knowledge_gaps`. **Identik untuk ketiga modul** — wadah yang seragam justru yang membuat tiga pandangan bisa ditampilkan berdampingan tanpa harus disamakan isinya. Yang wajib berbeda antar modul adalah kriteria dan kesimpulannya, bukan struktur laporannya. Dikunci di `01_ARCHITECTURE/04_DATA_CONTRACTS.md` §6.
++
++**Flag Response**
++Entri wajib di `ModuleOutput` untuk **setiap** flag severity tinggi yang menempel di Knowledge. Berisi `flag_id`, `impact`, dan `rationale` yang spesifik ke flag itu. Inilah yang membuat "wajib direspons" di Prinsip #4 bisa gagal secara mekanis: output yang jumlah flag_response-nya tidak cocok akan ditolak, bukan sekadar dianggap kurang rapi.
++
++**Undetermined (Risk)**
++Status pemeriksaan red flag saat data governance yang dibutuhkan `missing`. Beda tegas dari "tidak ada red flag": yang satu berarti tidak ketemu masalah, yang satu berarti tidak sempat melihat. Modul reasoning berhak tahu yang mana.
++
+ ---
+ 
+ © AlphaForge v2
+diff --git a/00_Foundation/04_DECISIONS.md b/00_Foundation/04_DECISIONS.md
+new file mode 100644
+index 0000000..56c88f3
+--- /dev/null
++++ b/00_Foundation/04_DECISIONS.md
+@@ -0,0 +1,171 @@
++# AlphaForge v2 — Catatan Keputusan (Decision Log)
++
++**Status:** Aktif
++**Doc version:** 1.0.0
++
++---
++
++## Kenapa Dokumen Ini Ada
++
++Prinsip #6 mensyaratkan sistem bisa diaudit ke belakang, termasuk mencatat versi metodologi. Tapi sampai revisi ini, spec sendiri tidak punya tempat untuk mencatat **kenapa** sebuah desain dipilih dan **apa yang ditolak**. Akibatnya keputusan lama tidak bisa dibedakan dari kebiasaan lama, dan siapa pun yang membacanya nanti (termasuk penulisnya sendiri) tidak tahu mana yang sudah dipertimbangkan matang dan mana yang cuma belum sempat dipikirkan.
++
++Setiap entri di bawah mencatat: keputusan, alasan, alternatif yang ditolak, dan biaya kalau nanti dibalik.
++
++Format ID: `D-<nomor>`. Entri tidak dihapus — kalau dibalik, statusnya diubah jadi `Dibatalkan oleh D-xx`, tidak dihilangkan.
++
++---
++
++## D-01 — Risk/Red-Flag Check hanya membaca Knowledge
++
++**Status:** Aktif
++**Menyentuh:** `03_LAYER2_SPECS/03_KNOWLEDGE.md`, `03_LAYER2_SPECS/04_RISK_REDFLAG_CHECK.md`
++
++### Masalah
++Dua dokumen saling bertentangan. `03_KNOWLEDGE.md` menutup dengan "Confidence, Peer, Risk — semua beroperasi di atas Knowledge, bukan Evidence mentah", sementara `04_RISK_REDFLAG_CHECK.md` menulis sumbernya "Diturunkan dari Knowledge & Evidence". Dua-duanya tidak bisa benar.
++
++Akar masalahnya bukan kalimatnya, tapi skemanya: Risk butuh tren shares outstanding (dilusi), pergantian auditor, restatement, dan litigasi — dan tidak satupun punya field di Knowledge. Jadi Risk *terpaksa* menjangkau Evidence.
++
++### Keputusan
++Risk hanya membaca Knowledge. Knowledge diberi **bagian 7 — Governance & Peristiwa Filing** yang menampung field-field yang selama ini dijangkau diam-diam dari Evidence.
++
++### Alasan
++- Invariant "satu arah, tiap tahap cuma menerima paket dari tahap sebelumnya" (`01_ARCHITECTURE/01_SYSTEM_OVERVIEW.md` §2) adalah salah satu klaim struktural utama v2. Melonggarkannya untuk menambal ketidaksinkronan dokumen berarti membayar prinsip dengan harga kesalahan tulis — terbalik.
++- Kalau Risk boleh nyelonong ke Evidence, tidak ada alasan prinsipil kenapa modul reasoning tidak boleh juga. Pengecualian pertama yang paling mahal.
++- Efek samping yang menguntungkan: begitu field governance ada di Knowledge, Confidence/Data Quality bisa mengukur kelengkapannya (Prinsip #5). Selama field itu cuma hidup di Evidence, Confidence buta terhadapnya.
++
++### Alternatif yang ditolak
++Longgarkan aturannya — akui Risk memang baca Evidence, ubah satu kalimat di `03_KNOWLEDGE.md`. Lebih murah (1 baris vs 1 bagian skema baru), tapi menggugurkan klaim arsitektur demi kenyamanan, dan membuat Confidence permanen buta terhadap sinyal governance.
++
++### Biaya kalau dibalik
++Rendah. Hapus bagian 7 dari Knowledge, kembalikan sumber Risk jadi "Knowledge & Evidence", longgarkan kalimat penutup `03_KNOWLEDGE.md`. Tidak ada komponen lain yang bergantung pada bagian 7 selain Risk dan Confidence.
++
++---
++
++## D-02 — Valuasi jadi bagian tersendiri di Knowledge
++
++**Status:** Aktif
++**Menyentuh:** `03_LAYER2_SPECS/03_KNOWLEDGE.md`
++
++### Masalah
++Tabel "fakta turunan vs penilaian" di `03_KNOWLEDGE.md` mencontohkan `"P/E 34, median peer group 19"` sebagai contoh sah level Knowledge — tapi skema 5 bagiannya tidak punya slot valuasi sama sekali. Padahal Multibagger dan Quality/Compound dua-duanya mustahil bereasoning tanpa valuasi.
++
++### Keputusan
++Tambah **bagian 6 — Valuasi** sebagai bagian tersendiri (bukan diperluas ke dalam bagian 2).
++
++### Alasan
++- Valuasi bukan kesehatan finansial. Bagian 2 menjawab "kondisi perusahaannya bagaimana"; valuasi menjawab "harganya berapa relatif terhadap kondisi itu". Perusahaan sehat bisa mahal, perusahaan sakit bisa murah — mencampurnya membuat dua pertanyaan berbeda terlihat seperti satu.
++- Bagian terpisah membuat Confidence bisa menandai "valuasi tidak bisa dihitung" (mis. perusahaan rugi, P/E tidak bermakna) tanpa mencemari skor kesehatan finansial.
++- Nomor 6 dipilih supaya aditif — bagian 1–5 tidak bergeser nomornya, referensi lama tidak putus.
++
++### Alternatif yang ditolak
++Perluas bagian 2 (Kesehatan Finansial). Lebih ringkas, tapi menggabung dua pertanyaan yang sengaja dipisah v2 dari v1.
++
++### Catatan penting
++Valuasi di Knowledge **hanya angka absolut per ticker** (P/E, P/S, EV/EBITDA, FCF yield). Angka relatif terhadap peer bukan di sini — lihat D-03.
++
++### Biaya kalau dibalik
++Rendah. Pindahkan field ke bagian 2, hapus bagian 6.
++
++---
++
++## D-03 — Knowledge tetap murni per-ticker; Peer jalan di fase kedua
++
++**Status:** Aktif
++**Menyentuh:** `03_LAYER2_SPECS/03_KNOWLEDGE.md`, `03_LAYER2_SPECS/06_PEER_RELATIVE_COMPARISON.md`, `01_ARCHITECTURE/01_SYSTEM_OVERVIEW.md`, `01_ARCHITECTURE/03_LAYER2_STOCK_ANALYSIS.md`
++
++### Masalah
++Dua hal sekaligus:
++
++1. **Melingkar.** Knowledge bagian 3 minta "pangsa revenue relatif terhadap total peer group" — jadi Knowledge butuh peer group. Tapi Peer/Relative Comparison beroperasi *di atas* Knowledge. A butuh B, B butuh A.
++2. **Diagram tidak jujur soal bentuk pipeline.** Diagram menggambar `Knowledge → [Confidence + Peer] → Risk` seolah alur per-ticker yang lurus. Padahal Peer butuh Knowledge **saham lain** sesektor — mustahil jalan streaming per ticker. Ada barrier di situ yang tidak pernah digambar.
++
++### Keputusan
++- Field "pangsa revenue relatif terhadap total peer group" **dihapus dari Knowledge**. Knowledge murni diturunkan dari Evidence ticker itu sendiri, tanpa pengetahuan apapun tentang ticker lain.
++- Pipeline Layer 2 diakui **dua fase** secara eksplisit, dengan barrier di antaranya:
++  - **Fase A (per-ticker, paralel):** Evidence → Knowledge
++  - **⟂ barrier:** tunggu Knowledge seluruh kandidat selesai
++  - **Fase B (butuh populasi):** Peer/Relative Comparison → Confidence → Risk → 3 modul → Aggregator
++- Semua angka relatif-peer hidup di output Peer, bukan di Knowledge.
++
++### Alasan
++- Menghapus satu field memutus lingkarannya sepenuhnya — tidak perlu akrobat urutan. Lingkaran itu ada *justru karena* satu field relatif nyelinap ke lapisan yang seharusnya absolut.
++- Barrier-nya nyata dan tidak bisa dihindari selama Peer memakai populasi hasil screening sendiri. Menggambarnya lebih jujur daripada pura-pura linear lalu kaget saat implementasi.
++- Sebagai bonus, batas Knowledge jadi jauh lebih tegas dan gampang dites: *Knowledge suatu ticker harus bisa dihitung dengan hanya Evidence ticker itu di tangan.* Itu satu baris test.
++
++### Alternatif yang ditolak
++- **Pindahkan Peer ke setelah Risk** — tidak menyelesaikan apa-apa; barrier-nya tetap ada, cuma pindah tempat.
++- **Biarkan Knowledge memanggil Peer** — merusak invariant satu arah, sama seperti D-01.
++
++### Biaya kalau dibalik
++Sedang. Kalau field pangsa revenue dikembalikan ke Knowledge, lingkaran D-03 hidup lagi dan butuh solusi lain (mis. dua-pass Knowledge).
++
++---
++
++## D-04 — Output tiga modul reasoning punya kontrak formal
++
++**Status:** Aktif
++**Menyentuh:** `01_ARCHITECTURE/04_DATA_CONTRACTS.md` (baru), `03_LAYER2_SPECS/07`, `08`, `09`, `11`
++
++### Masalah
++Aggregator ditugasi "menampilkan tiga hasil berdampingan tanpa mengubah kesimpulan masing-masing". Tapi bentuk "hasil" itu tidak pernah didefinisikan di manapun. Berdampingan apanya, kalau bentuknya belum ada.
++
++Turunannya: Prinsip #4 mewajibkan flag "direspons eksplisit", Prinsip #5 mewajibkan confidence menempel di tiap kesimpulan modul — dua kewajiban yang mengandaikan struktur output yang tidak pernah ditulis.
++
++### Keputusan
++Definisikan kontrak output modul di `01_ARCHITECTURE/04_DATA_CONTRACTS.md`, dengan dua aturan validasi yang **menolak output**, bukan sekadar mengharapkan:
++
++- `flag_responses[]` harus punya satu entri untuk **setiap** flag severity tinggi yang menempel di Knowledge. Jumlah tidak cocok → output ditolak.
++- `confidence` wajib ada dan wajib menyebutkan field `missing` yang membatasinya.
++
++### Alasan
++"Wajib direspons" tanpa mekanisme penolakan cuma harapan. Log progres 14 Juli sudah mencatat gejalanya sendiri: respons red-flag di tiga modul masih level umum. Prinsip yang tidak bisa gagal secara mekanis akan pelan-pelan jadi hiasan.
++
++### Alternatif yang ditolak
++Serahkan bentuk output ke fase implementasi. Itu yang sudah terjadi — dan hasilnya kode mendahului spec di bagian yang justru paling menentukan identitas v2.
++
++### Biaya kalau dibalik
++Tinggi. Aggregator, Confidence, dan Historical Tracking semuanya membaca kontrak ini.
++
++---
++
++## D-05 — Market Breadth dihitung atas universe sendiri, bukan S&P 500
++
++**Status:** Aktif
++**Menyentuh:** `02_LAYER1_SPECS/06_MARKET_BREADTH.md`, `04_DATA_SOURCES/01_PROVIDERS_OVERVIEW.md`
++
++### Masalah
++Spec Breadth minta "daftar konstituen index (S&P 500/NASDAQ)" dan log progres memperlakukannya seolah tinggal disuplai. Masalahnya daftar konstituen S&P 500 resmi itu berlisensi S&P Dow Jones Indices — yang gratis cuma scraping Wikipedia atau menebak dari holdings ETF. Jadi ini bukan "belum diberi input", ini sumber gratisnya memang tidak ada.
++
++### Keputusan
++Breadth dihitung atas **universe hasil Screening sendiri** (NASDAQ + NYSE dari listing files, setelah hard exclude).
++
++### Alasan
++- Datanya sudah ada dan sudah gratis. Tidak ada dependensi lisensi baru, tidak ada scraping baru.
++- Lebih selaras dengan v2. Seluruh alasan Layer 2 menyaring market-wide adalah karena watchlist manual v1 membatasi apa yang bisa terlihat. Mengukur "kesehatan market" lewat 500 saham terbesar, lalu menganalisa saham di luar 500 itu, artinya konteksnya diukur dari populasi yang berbeda dari yang dianalisa.
++- Ambang hard exclude Screening (market cap > $30jt, dollar volume > $300rb) sudah membuang shell dan ticker mati — persis noise yang bikin breadth mentah jadi tidak bermakna.
++
++### Konsekuensi yang diterima
++Angkanya **tidak bisa dibandingkan** dengan pembacaan breadth publik manapun ($ADD, % di atas MA200 versi S&P). Ini bukan bug — tapi harus dinyatakan di output supaya tidak salah dibaca sebagai indikator standar. Breadth atas ~2.000 saham hasil screening akan sistematis beda dari breadth atas 500 mega-cap, terutama saat rally sempit.
++
++### Alternatif yang ditolak
++- **Holdings ETF (SPY/QQQ)** — bisa, dipublikasikan issuer harian. Tapi menambah dependensi sumber baru untuk mendapat populasi yang justru kurang cocok dengan cakupan v2.
++- **Scraping Wikipedia** — standar ganda dengan penolakan scraping Investing.com di `09_MACRO_CALENDAR.md`.
++
++### Biaya kalau dibalik
++Rendah, kalau nanti ada anggaran lisensi. Ganti sumber universe; rumus advance/decline dan % di atas MA200 tidak berubah.
++
++---
++
++## Keputusan Terbuka (Belum Diputuskan)
++
++Dicatat di sini supaya tidak keliru dianggap sudah beres:
++
++- **Format output Confidence** — numerik 0–100, kategori diskrit, atau keduanya (`03_LAYER2_SPECS/05_CONFIDENCE_DATA_QUALITY.md`).
++- **Bobot & kriteria tiga modul reasoning** — bentuk output-nya sudah dikunci (D-04), isi reasoning-nya belum.
++- **Ambang kuantitatif red flag** — persentase dilusi, nilai insider selling, jangka waktu.
++- **TTL cache per jenis data** dan ukuran batch aman untuk `yfinance`.
++- **Budget waktu/call satu sesi penuh** — belum pernah dihitung. Lihat `04_DATA_SOURCES/05_RATE_LIMIT_CACHING_STRATEGY.md`.
++
++---
++
++© AlphaForge v2
+diff --git a/01_ARCHITECTURE/01_SYSTEM_OVERVIEW.md b/01_ARCHITECTURE/01_SYSTEM_OVERVIEW.md
+index e26563d..81ff978 100644
+--- a/01_ARCHITECTURE/01_SYSTEM_OVERVIEW.md
++++ b/01_ARCHITECTURE/01_SYSTEM_OVERVIEW.md
+@@ -1,6 +1,7 @@
+ # Gambaran Sistem (System Overview)
+ 
+-**Status:** Aktif
++**Status:** Aktif — revisi: barrier Fase A/B, rujukan kontrak data
++**Doc version:** 2.0.0
+ 
+ ---
+ 
+@@ -18,13 +19,15 @@
+                                 ▼  (Market Context Package)
+                     LAYER 2 — STOCK ANALYSIS ENGINE
+     ┌───────────────────────────────────────────────────────────┐
++    │  FASE A — per-ticker, paralel                                │
+     │  Screening (NASDAQ + NYSE, market-wide)                      │
+     │           ↓                                                 │
+     │  Evidence (fakta terverifikasi per ticker)                   │
+     │           ↓                                                 │
+-    │  Knowledge (dibangun DARI evidence)                          │
+-    │           ↓                                                 │
+-    │  Confidence/Data Quality · Peer/Relative Comparison           │
++    │  Knowledge (dibangun DARI evidence, murni per-ticker)         │
++    │  ═══════════════ BARRIER ═══════════════                     │
++    │  FASE B — butuh populasi                                     │
++    │  Peer/Relative Comparison · Confidence/Data Quality           │
+     │           ↓                                                 │
+     │  Risk / Red-Flag Check (gerbang)                              │
+     │           ↓                                                 │
+@@ -45,7 +48,8 @@
+ 
+ ## 2. Prinsip Desain Utama
+ 
+-- **Satu arah aliran data.** Setiap tahap hanya menerima output dari tahap sebelumnya lewat "paket" yang jelas bentuknya — tidak ada tahap yang memanggil balik ke belakang.
++- **Satu arah aliran data.** Setiap tahap hanya menerima output dari tahap sebelumnya lewat "paket" yang jelas bentuknya — tidak ada tahap yang memanggil balik ke belakang. Bentuk tiap paket dikunci di `04_DATA_CONTRACTS.md`; sebelum dokumen itu ada, klaim ini tidak bisa dicek.
++- **Dua fase, bukan satu alur lurus.** Fase A (Evidence→Knowledge) jalan per-ticker paralel; Fase B (Peer→…→Aggregator) butuh populasi utuh. Barrier di antaranya nyata dan tidak bisa dihindari — lihat `03_LAYER2_STOCK_ANALYSIS.md` §2.4.
+ - **Layer 1 dihitung sekali, dipakai berkali-kali.** Market Context Package tidak dihitung ulang per saham; ia dihitung untuk kondisi market saat itu dan dipakai sebagai input bersama untuk semua saham yang diproses di sesi yang sama.
+ - **Tiga modul reasoning berjalan independen.** Mereka menerima Knowledge dan Market Context yang sama, tapi masing-masing punya logika reasoning sendiri dan tidak saling mempengaruhi satu sama lain.
+ - **Aggregator tidak menyimpulkan.** Tugasnya menyusun tampilan, bukan memutuskan mana dari tiga pandangan yang "benar".
+@@ -68,6 +72,8 @@
+ - Detail Layer 1 → `02_LAYER1_MARKET_CONTEXT.md`
+ - Detail Layer 2 → `03_LAYER2_STOCK_ANALYSIS.md`
+ - Spec tiap komponen → folder `02_LAYER1_SPECS/` dan `03_LAYER2_SPECS/`
++- Bentuk tiap paket data → `04_DATA_CONTRACTS.md`
++- Keputusan arsitektur & alternatif yang ditolak → `00_Foundation/04_DECISIONS.md`
+ 
+ ---
+ 
+diff --git a/01_ARCHITECTURE/02_LAYER1_MARKET_CONTEXT.md b/01_ARCHITECTURE/02_LAYER1_MARKET_CONTEXT.md
+index 62115a9..0c997ed 100644
+--- a/01_ARCHITECTURE/02_LAYER1_MARKET_CONTEXT.md
++++ b/01_ARCHITECTURE/02_LAYER1_MARKET_CONTEXT.md
+@@ -1,6 +1,7 @@
+ # Layer 1 — Market Context Engine
+ 
+-**Status:** Aktif
++**Status:** Aktif — revisi: DAG urutan komputasi ditambahkan, kontrak paket dirujuk
++**Doc version:** 1.1.0
+ 
+ ---
+ 
+@@ -40,7 +41,9 @@ Spec detail tiap komponen (definisi, sumber data, cara hitung) ada di `02_LAYER1
+ 
+ Layer 1 tidak menghasilkan skor tunggal seperti "market sedang bagus/jelek". Ia menghasilkan **paket konteks** — kumpulan pembacaan dari 12 komponen di atas, yang kemudian dipakai Layer 2 sebagai referensi, bukan sebagai filter otomatis.
+ 
+-Contoh isi paket (ilustratif, bukan format final):
++Bentuk formalnya dikunci di `01_ARCHITECTURE/04_DATA_CONTRACTS.md` §3 — termasuk field `kind` (direct vs derived) yang membuat Prinsip #5 ikut mengalir bersama datanya ke Layer 2, bukan cuma jadi kalimat di dokumen spec.
++
++Contoh isi paket (ilustratif):
+ ```
+ {
+   "business_cycle_stage": "mid-cycle",
+@@ -56,7 +59,49 @@ Contoh isi paket (ilustratif, bukan format final):
+ 
+ Market Context Package dihitung **sekali per sesi analisa**, bukan berulang per saham. Semua saham yang dianalisa dalam satu sesi screening/analyze memakai paket konteks yang sama.
+ 
+-## 5. Bagaimana Konteks Ini Dipakai di Layer 2
++## 5. Urutan Komputasi (DAG)
++
++Bagian "Dipakai Oleh" di spec komponen sebelumnya banyak memakai frasa "saling melengkapi" / "saling terkait". Setelah ditelusuri, frasa itu ternyata menggambarkan **kedekatan tema**, bukan aliran data — dan itu menyembunyikan fakta yang cukup penting:
++
++**Sebelas dari dua belas komponen Layer 1 adalah leaf.** Mereka tidak butuh komponen Layer 1 lain, cuma sumber luar (Yahoo Finance, FRED, AAII, CBOE). Artinya sebelas komponen itu bisa dihitung **paralel penuh**, tanpa koordinasi.
++
++Cuma ada **satu** dependensi mengikat di seluruh Layer 1:
++
++```
++  ┌─ business_cycle_stage ─┐
++  ├─ sector_rotation ──────┤
++  ├─ money_flow ───────────┤
++  ├─ liquidity_conditions ─┤
++  ├─ yield_curve ──────────┤   11 komponen leaf
++  ├─ market_regime ────────┤   (paralel penuh)
++  ├─ macro_calendar ───────┤
++  ├─ currency_dxy ─────────┤
++  ├─ commodity_signals ────┤
++  ├─ vix ──────────────┐   │
++  └─ market_breadth ───┤   │
++                       │   │
++                       ▼   │
++              market_sentiment          ← satu-satunya composite
++                       │   │
++                       ▼   ▼
++              Market Context Package
++```
++
++`market_sentiment` butuh `vix` + `market_breadth` (plus AAII & put/call dari luar), jadi ia **harus dihitung terakhir**.
++
++Konsekuensi praktis: Layer 1 itu satu gelombang paralel + satu langkah akhir. Bukan rantai dua belas tahap. Ini jauh lebih murah dari yang tersirat di dokumen sebelumnya.
++
++### Kalau Ada Komponen yang Gagal
++
++Paket **tetap dikirim** dengan komponen itu `status=missing`. Layer 2 tidak boleh berhenti hanya karena satu dari dua belas komponen kosong (lihat `04_DATA_CONTRACTS.md` §3).
++
++Khusus `market_sentiment`: kalau salah satu inputnya hilang, ia dihitung dari sisanya dengan `status=degraded` + catatan input mana yang hilang — bukan diam-diam berpura-pura lengkap.
++
++### Aturan ke Depan
++
++Kalau nanti ada komponen yang mau menjadikan komponen lain sebagai input, itu **perubahan formula** — wajib menaikkan `method_version` komponen tersebut (Prinsip #6) dan memperbarui DAG di atas. Menambah dependensi diam-diam berarti entri historis lama tidak lagi sebanding dengan yang baru.
++
++## 6. Bagaimana Konteks Ini Dipakai di Layer 2
+ 
+ Market Context Package menyertai setiap saham yang dianalisa di Layer 2, tapi **tidak otomatis mengubah skor**. Masing-masing dari tiga modul reasoning (Multibagger, Quality/Compound, Speculative) punya kebebasan menafsirkan konteks ini sesuai relevansinya — misalnya modul Speculative kemungkinan besar lebih sensitif terhadap VIX dan Market Sentiment, sementara Quality/Compound lebih memperhatikan Yield Curve dan Liquidity Conditions.
+ 
+diff --git a/01_ARCHITECTURE/03_LAYER2_STOCK_ANALYSIS.md b/01_ARCHITECTURE/03_LAYER2_STOCK_ANALYSIS.md
+index 3691c89..5a01ba6 100644
+--- a/01_ARCHITECTURE/03_LAYER2_STOCK_ANALYSIS.md
++++ b/01_ARCHITECTURE/03_LAYER2_STOCK_ANALYSIS.md
+@@ -1,6 +1,7 @@
+ # Layer 2 — Stock Analysis Engine
+ 
+-**Status:** Aktif
++**Status:** Aktif — revisi: pipeline dua fase + barrier dibuat eksplisit (D-03), kontrak data dirujuk
++**Doc version:** 2.0.0
+ 
+ ---
+ 
+@@ -21,10 +22,25 @@ Mengumpulkan fakta terverifikasi per ticker: data keuangan, harga, kepemilikan i
+ ### 2.3 Knowledge
+ Menyusun fakta dari Evidence menjadi pemahaman terstruktur — semacam profil perusahaan yang siap dipakai sebagai bahan reasoning. Knowledge tidak pernah dibangun sebelum Evidence ada (lihat Prinsip #1 di `00_Foundation/02_PRINCIPLES.md`).
+ 
+-### 2.4 Confidence & Peer Comparison
+-Dua proses yang menempel di tahap Knowledge:
+-- **Confidence/Data Quality** — menandai seberapa kuat evidence yang mendasari knowledge ini.
+-- **Peer/Relative Comparison** — membandingkan saham dengan kompetitor/industri sejenis, supaya jelas apakah suatu angka "bagus" secara absolut atau relatif.
++### 2.4 Barrier: Batas Fase A / Fase B
++
++**Ini titik yang paling sering salah digambar.** Diagram sebelumnya menampilkan `Knowledge → [Confidence + Peer] → Risk` seolah alur lurus per ticker. Itu tidak mungkin: Peer/Relative Comparison butuh Knowledge **saham lain** sesektor. Selama Knowledge ticker pembanding belum jadi, Peer untuk ticker ini tidak bisa dihitung.
++
++Jadi Layer 2 sebenarnya dua fase:
++
++- **Fase A — per-ticker, paralel penuh:** Evidence → Knowledge. Tiap ticker berdiri sendiri, tanpa koordinasi. Dijamin oleh invariant di `03_LAYER2_SPECS/03_KNOWLEDGE.md`: Knowledge suatu ticker harus bisa dihitung dengan hanya Evidence ticker itu.
++- **⟂ Barrier:** tunggu Knowledge seluruh kandidat selesai.
++- **Fase B — butuh populasi:** Peer → Confidence → Risk → 3 modul → Aggregator.
++
++Barrier ini bukan pilihan desain — ia konsekuensi tak terhindarkan dari memakai populasi hasil screening sendiri sebagai sumber peer. Yang bisa dipilih cuma: menggambarnya sekarang, atau menemukannya saat implementasi.
++
++**Konsekuensi:** Fase A menghasilkan Knowledge untuk ~1.500–3.000 kandidat yang semuanya harus ada di tangan sebelum Fase B mulai. Ini satu-satunya titik di pipeline yang menahan populasi utuh — perlu masuk hitungan memori & waktu saat implementasi.
++
++Untuk analisa ticker tunggal (mis. CLI `analyze AAPL`), tidak ada populasi — `peer_tickers` disuplai manual dan `peer_group_basis` ditandai `manual`, bukan `screening_universe`. Bedanya harus terlihat di output.
++
++### 2.4b Confidence & Peer Comparison (Fase B)
++- **Peer/Relative Comparison** — membandingkan saham dengan kompetitor/industri sejenis. Sejak D-03, ini **satu-satunya tempat angka relatif-peer hidup**; Knowledge sengaja dibuat murni per-ticker.
++- **Confidence/Data Quality** — menandai seberapa kuat evidence yang mendasari knowledge ini, termasuk menerima `low_sample_size` & `peer_failures` dari Peer.
+ 
+ ### 2.5 Risk / Red-Flag Check
+ Pemeriksaan yang berjalan sebelum Knowledge diteruskan ke modul reasoning. Kalau ditemukan red flag serius (masalah akuntansi, governance, litigasi besar), ini ditandai secara eksplisit dan **wajib direspons** oleh ketiga modul di bawah — bukan menghentikan proses secara default, dan bukan hanya jadi bagian dari salah satu modul saja. Kasus yang sudah terkonfirmasi sangat berat (fraud terbukti, delisting resmi) adalah pengecualian yang boleh menghentikan proses lebih awal — lihat Prinsip #4 di `00_Foundation/02_PRINCIPLES.md`.
+@@ -45,23 +61,34 @@ Setelah output dikeluarkan, hasilnya disimpan sebagai catatan historis, untuk di
+ ## 3. Diagram Ringkas
+ 
+ ```
+-Screening → Evidence → Knowledge → [Confidence + Peer Comparison]
+-                                            ↓
+-                                Risk / Red-Flag Check
+-                                            ↓
+-                ┌───────────────┬──────────────────┬─────────────────┐
+-                ▼               ▼                  ▼
+-          Multibagger      Quality/Compound     Speculative
+-                                                 (+ Catalyst Tracking)
+-                └───────────────┴──────────────────┴─────────────────┘
+-                                        ↓
+-                                  Aggregator
+-                                        ↓
+-                                    Output
+-                                        ↓
+-                        Historical Tracking / Decision Journal
++FASE A — per-ticker, paralel penuh
++  Screening → Evidence → Knowledge
++
++═════════════════ BARRIER ═════════════════
++  tunggu Knowledge SELURUH kandidat selesai
++
++FASE B — butuh populasi
++        Peer / Relative Comparison
++                    ↓
++          Confidence / Data Quality
++                    ↓
++            Risk / Red-Flag Check
++                    ↓
++    ┌───────────────┬──────────────────┬─────────────────┐
++    ▼               ▼                  ▼
++Multibagger    Quality/Compound     Speculative
++                                   (+ Catalyst Tracking)
++    └───────────────┴──────────────────┴─────────────────┘
++                    ↓
++              Aggregator  (3 pandangan, urutan tetap, tanpa verdict)
++                    ↓
++                 Output
++                    ↓
++      Historical Tracking / Decision Journal
+ ```
+ 
++Bentuk tiap paket yang mengalir di atas dikunci di `01_ARCHITECTURE/04_DATA_CONTRACTS.md`.
++
+ ## 4. Kenapa Screening Market-Wide, Bukan Watchlist
+ 
+ v1 terbatas pada ~33 ticker tema tertentu (AI, Space, Energy) yang dipilih manual. Ini berarti peluang bagus di luar tema itu tidak pernah terlihat. v2 menyaring seluruh NASDAQ + NYSE, sehingga cakupannya tidak dibatasi bias pemilihan manual di awal.
+diff --git a/01_ARCHITECTURE/04_DATA_CONTRACTS.md b/01_ARCHITECTURE/04_DATA_CONTRACTS.md
+new file mode 100644
+index 0000000..b949fa1
+--- /dev/null
++++ b/01_ARCHITECTURE/04_DATA_CONTRACTS.md
+@@ -0,0 +1,242 @@
++# Kontrak Data (Data Contracts)
++
++**Status:** Aktif
++**Doc version:** 1.0.0
++
++---
++
++## 1. Kenapa Dokumen Ini Ada
++
++`01_SYSTEM_OVERVIEW.md` §2 menyatakan: *"Setiap tahap hanya menerima output dari tahap sebelumnya lewat paket yang jelas bentuknya."* Sampai revisi ini, "bentuknya" tidak pernah didefinisikan di manapun kecuali skema Knowledge. Market Context Package cuma punya contoh yang ditandai "ilustratif, bukan format final"; output tiga modul reasoning dan Aggregator tidak punya bentuk sama sekali.
++
++Akibatnya dua klaim inti v2 menggantung di udara:
++- Aggregator "menampilkan tiga hasil berdampingan" — berdampingan apanya, kalau bentuknya belum ada.
++- Flag "wajib direspons" (Prinsip #4) dan confidence "menempel di tiap kesimpulan" (Prinsip #5) — dua kewajiban yang mengandaikan struktur yang belum ditulis.
++
++Dokumen ini mengunci bentuknya. Isi reasoning-nya tetap urusan spec masing-masing modul; yang dikunci di sini cuma **wadahnya**.
++
++Notasi di bawah bersifat deskriptif (bukan JSON Schema formal). Yang mengikat adalah nama field, tipe, dan aturan validasi — bukan format serialisasinya.
++
++---
++
++## 2. Aturan Umum
++
++1. **Field kosong ditulis `null` + status `missing`.** Tidak pernah ditebak, diinterpolasi, atau diisi rata-rata industri. Berlaku di semua paket.
++2. **Setiap paket membawa `method_version`.** Wajib untuk komponen derived/approximated (Prinsip #6). Format semver: perubahan formula yang mengubah hasil = naik minor/major.
++3. **Setiap paket membawa `generated_at`** (ISO 8601, UTC).
++4. **Paket tidak pernah dimutasi oleh tahap berikutnya.** Tahap hilir menghasilkan paket baru yang mereferensikan yang hulu, bukan menimpanya.
++
++---
++
++## 3. Market Context Package
++
++Dihasilkan Layer 1. Dihitung **sekali per sesi** (`02_LAYER1_MARKET_CONTEXT.md` §4).
++
++```
++MarketContextPackage {
++  session_id            : string
++  generated_at          : timestamp
++  components            : map<component_name, ComponentReading>
++}
++
++ComponentReading {
++  name                  : string        # mis. "vix", "business_cycle_stage"
++  value                 : any           # angka atau kategori, lihat spec komponen
++  status                : enum{ok, degraded, missing}
++  kind                  : enum{direct, derived}     # WAJIB — lihat catatan di bawah
++  method_version        : semver | null             # wajib kalau kind=derived
++  inputs                : [string]                  # nama komponen lain yang dipakai
++  sources               : [{provider, fetched_at}]
++  note                  : string | null             # alasan kalau degraded/missing
++}
++```
++
++### Catatan: kenapa `kind` wajib
++
++Prinsip #5 mensyaratkan komponen derived/approximated menyatakan dirinya sebagai pembacaan yang dikonstruksi, bukan angka resmi. Sampai revisi ini, syarat itu cuma dipenuhi lewat kalimat prosa di dokumen spec — yang tidak ikut mengalir ke Layer 2. Field `kind` membuatnya ikut jalan bersama datanya, sehingga modul reasoning bisa memperlakukan `business_cycle_stage` (derived, disusun sendiri dari tiga indikator FRED) berbeda dari `vix` (direct, satu angka dari satu sumber).
++
++`kind=direct`: yield_curve, vix, dxy, commodity_signals, market_regime, sector_rotation, liquidity_conditions, macro_calendar
++`kind=derived`: business_cycle_stage, money_flow, market_breadth, market_sentiment
++
++### Komponen yang gagal
++
++Kalau satu komponen gagal dihitung, paket **tetap dikirim** dengan komponen itu `status=missing`. Layer 2 tidak boleh berhenti hanya karena satu dari dua belas komponen kosong — tapi modul reasoning yang menyandarkan kesimpulannya ke komponen itu wajib menurunkan confidence-nya (lihat §6).
++
++---
++
++## 4. Knowledge Profile
++
++Skema lengkapnya di `03_LAYER2_SPECS/03_KNOWLEDGE.md`. Ringkasan bentuk paketnya:
++
++```
++KnowledgeProfile {
++  ticker                : string
++  evidence_snapshot_date: date
++  method_version        : semver
++  sections              : {
++    identity            : {...}   # bagian 1
++    financial_health    : {...}   # bagian 2
++    competitive_position: {...}   # bagian 3
++    historical_trends   : {...}   # bagian 4
++    ownership           : {...}   # bagian 5
++    valuation           : {...}   # bagian 6 — lihat D-02
++    governance_events   : {...}   # bagian 7 — lihat D-01
++  }
++  screening_flags       : [string]              # diteruskan apa adanya dari Screening
++  field_completeness    : {filled: int, expected: int, missing: [string]}
++  sources               : [{provider, fetched_at}]
++}
++```
++
++**Invariant yang mengikat (D-03):** `KnowledgeProfile` suatu ticker harus bisa dihitung dengan **hanya Evidence ticker itu** di tangan. Tidak ada field yang membutuhkan pengetahuan tentang ticker lain. Ini bisa dites langsung: jalankan Knowledge dengan Evidence satu ticker saja — kalau gagal atau menghasilkan field kosong yang seharusnya terisi, invariant-nya bocor.
++
++---
++
++## 5. Peer Comparison Result
++
++Dihasilkan di Fase B, setelah barrier (lihat `03_LAYER2_STOCK_ANALYSIS.md` §2.4).
++
++```
++PeerComparisonResult {
++  ticker                : string
++  peer_group            : [string]              # ticker pembanding
++  peer_group_basis      : string                # dasar pengelompokan (sektor/industri)
++  peer_group_size       : int
++  low_sample_size       : bool                  # true kalau size < 3
++  peer_failures         : [{ticker, reason}]    # peer yang gagal ditarik — eksplisit, bukan silent skip
++  metrics               : map<metric_name, {
++                            value      : number | null,
++                            peer_median: number | null,
++                            percentile : number | null,
++                            status     : enum{ok, missing}
++                          }>
++  method_version        : semver
++}
++```
++
++`low_sample_size=true` tidak menggugurkan hasil — tapi Confidence wajib menurunkan skor bagian relatif, dan modul yang memakainya wajib menyebutnya.
++
++---
++
++## 6. Module Output — Kontrak Inti (D-04)
++
++Berlaku identik untuk ketiga modul. **Bentuknya sama, isinya bebas** — itu justru yang membuat Multi-Lens bisa dibandingkan tanpa disamakan.
++
++```
++ModuleOutput {
++  module                : enum{multibagger, quality_compound, speculative}
++  ticker                : string
++  method_version        : semver
++
++  stance                : enum{compelling, interesting, weak, not_applicable}
++  stance_rationale      : string              # kenapa stance itu, bahasa manusia
++
++  confidence            : {
++                            score   : number,          # 0–100
++                            band    : enum{low, medium, high},
++                            limiters: [string]         # WAJIB kalau band != high
++                          }
++
++  flag_responses        : [{
++                            flag_id  : string,
++                            impact   : enum{none, lowers_confidence, changes_stance, disqualifying},
++                            rationale: string
++                          }]
++
++  context_used          : [{
++                            component: string,         # nama komponen Layer 1
++                            influence: string          # bagaimana ia mempengaruhi stance
++                          }]
++
++  knowledge_gaps        : [string]            # field missing yang membatasi kesimpulan ini
++  generated_at          : timestamp
++}
++```
++
++### Aturan Validasi — Output Ditolak Kalau Gagal
++
++Ini bagian yang membuat Prinsip #4 dan #5 punya gigi. Bukan harapan — syarat.
++
++| # | Aturan | Prinsip |
++|---|---|---|
++| V1 | Untuk **setiap** flag severity tinggi di Knowledge, harus ada tepat satu entri `flag_responses` dengan `flag_id` yang cocok. Jumlah tidak sama → **output ditolak**. | #4 |
++| V2 | `flag_responses[].rationale` harus menyebut flag itu secara spesifik, bukan kalimat umum yang sama untuk semua flag. Rationale identik di ≥2 flag berbeda → **ditandai `generic_response`** untuk direview. | #4 |
++| V3 | Kalau `confidence.band != high`, `limiters` tidak boleh kosong. | #5 |
++| V4 | Kalau ada field Knowledge berstatus `missing` yang masuk kriteria modul ini, ia harus muncul di `knowledge_gaps`. | #5 |
++| V5 | `stance = not_applicable` wajib punya `stance_rationale` — modul tidak boleh diam-diam mangkir dari saham yang sulit. | #3 |
++
++> **Catatan V2:** log progres 14 Juli sudah mencatat gejalanya duluan — "respons red-flag di 3 modul masih level umum (moderate/elevated), belum spesifik per jenis flag". V1 memaksa modul menjawab; V2 memaksa jawabannya berbeda-beda. Tanpa V2, V1 gampang dipenuhi dengan menyalin kalimat yang sama tiga kali.
++
++### Tes Independensi (Prinsip #3)
++
++Prinsip #3 sudah mendefinisikan "independen" secara teknis, tapi belum pernah menyatakan cara mengeceknya. Dua tes yang bisa dijalankan langsung:
++
++- **T1 — Urutan tidak berpengaruh.** Jalankan ketiga modul dengan input identik dalam urutan acak, berkali-kali. Semua `ModuleOutput` harus identik byte-per-byte tiap kali. Kalau tidak, ada state yang bocor antar modul.
++- **T2 — Konvergensi mencurigakan.** Di satu batch analisa, kalau ketiga modul menghasilkan `stance` yang sama untuk >90% ticker, Multi-Lens-nya patut dicurigai jadi klaim di atas kertas. Ini bukan kegagalan otomatis — bisa saja market-nya memang seragam — tapi wajib memicu review, bukan lewat diam-diam.
++
++---
++
++## 7. Aggregator Output
++
++```
++AggregatorOutput {
++  ticker                : string
++  session_id            : string
++  market_context_ref    : session_id                 # konteks apa yang berlaku saat itu
++  knowledge_ref         : {ticker, evidence_snapshot_date}
++
++  module_outputs        : [ModuleOutput]             # selalu 3, urutan lihat di bawah
++  risk_flags            : [Flag]                     # eksplisit, bukan disembunyikan
++  confidence_overall    : {score, band, limiters}
++
++  halted                : bool                       # true kalau berhenti di severity ekstrem
++  halt_reason           : string | null
++
++  method_versions       : map<component, semver>     # snapshot semua versi yang berlaku
++  generated_at          : timestamp
++}
++```
++
++### Urutan Tampilan
++
++`module_outputs` **selalu** berurutan tetap: `multibagger`, `quality_compound`, `speculative`.
++
++Urutan tetap dipilih secara sadar, bukan default. Alternatifnya — mengurutkan berdasarkan `confidence` atau `stance` — terdengar netral tapi justru menyelundupkan peringkat: modul teratas otomatis terbaca sebagai "jawabannya". Itu persis single-verdict lewat pintu belakang, yang seluruh Prinsip #3 dibuat untuk mencegahnya.
++
++Urutan tetap tetap punya bias anchoring (yang pertama dibaca lebih dulu), tapi biasnya **konstan** — sama untuk semua saham, jadi tidak bisa disalahartikan sebagai sinyal tentang saham ini. Bias yang konstan bisa dikenali dan dikompensasi pembaca; bias yang berubah-ubah per saham tidak.
++
++**Aggregator tidak boleh punya field `verdict`, `score`, `rank`, atau `recommendation`.** Bukan karena belum sempat — karena itu tugas yang sengaja tidak diberikan (`01_SYSTEM_OVERVIEW.md` §3).
++
++### Kalau `halted = true`
++
++Saham berhenti di Risk severity ekstrem (fraud terbukti, delisting). `module_outputs` kosong, `halt_reason` wajib terisi, `risk_flags` tetap lengkap. Entri tetap disimpan ke Historical Tracking — saham yang dihentikan tetap perlu bisa diaudit di kemudian hari.
++
++---
++
++## 8. Historical Entry
++
++```
++HistoricalEntry {
++  entry_id              : string
++  analyzed_at           : timestamp
++  aggregator_output     : AggregatorOutput      # snapshot utuh, bukan ringkasan
++  method_versions       : map<component, semver>
++  outcome               : null                  # diisi belakangan saat evaluasi
++}
++```
++
++`method_versions` disalin ke level entri (bukan cuma di dalam `aggregator_output`) supaya audit di masa depan bisa memfilter entri per versi metodologi tanpa membongkar isi snapshot — persis kebutuhan yang disebut Prinsip #6.
++
++`outcome` sengaja `null` saat entri dibuat. Lihat `03_LAYER2_SPECS/12_HISTORICAL_TRACKING_JOURNAL.md` — **penyimpanan** berjalan sejak v2.0, **evaluasinya** yang boleh menyusul ke v2.1.
++
++---
++
++## 9. Referensi
++
++- Keputusan di balik kontrak ini → `00_Foundation/04_DECISIONS.md` (D-01 s/d D-05)
++- Skema Knowledge lengkap → `03_LAYER2_SPECS/03_KNOWLEDGE.md`
++- Bentuk Flag → `03_LAYER2_SPECS/04_RISK_REDFLAG_CHECK.md`
++
++---
++
++© AlphaForge v2
+diff --git a/02_LAYER1_SPECS/01_BUSINESS_CYCLE_STAGE.md b/02_LAYER1_SPECS/01_BUSINESS_CYCLE_STAGE.md
+index 7be1669..db771ef 100644
+--- a/02_LAYER1_SPECS/01_BUSINESS_CYCLE_STAGE.md
++++ b/02_LAYER1_SPECS/01_BUSINESS_CYCLE_STAGE.md
+@@ -1,6 +1,9 @@
+ # Business Cycle Stage
+ 
+-**Status:** Aktif
++**Status:** Aktif — revisi: method_version & kind ditambahkan (Prinsip #5, #6)
++**Doc version:** 1.1.0
++**Method version:** 1.0.0
++**Kind:** derived / approximated
+ 
+ ## Definisi
+ 
+@@ -18,9 +21,15 @@ FRED (Federal Reserve Economic Data) — indikator seperti GDP growth, ISM PMI,
+ 
+ Kombinasikan beberapa indikator makro (PMI, GDP QoQ, unemployment trend) menjadi satu klasifikasi fase siklus. Bukan satu angka tunggal dari satu sumber — perlu logika gabungan sendiri (derived/approximated).
+ 
+-## Dipakai Oleh
++## Input Dari
+ 
+-Sector Rotation (sebagai dasar), ketiga modul reasoning Layer 2 sebagai bagian dari Market Context Package.
++Tidak ada komponen Layer 1 lain — dihitung langsung dari indikator FRED. Komponen leaf.
++
++> Yield Curve dan Liquidity Conditions **bukan** input komputasi ke sini, meski sama-sama membaca kondisi makro. Versi sebelumnya menulis keduanya "saling terkait", yang kabur — kalau nanti keduanya benar-benar mau dijadikan input, itu perubahan formula dan wajib menaikkan `method_version`.
++
++## Digunakan Oleh
++
++Ketiga modul reasoning Layer 2 sebagai bagian dari Market Context Package. Sector Rotation memakainya sebagai **konteks interpretasi** (fase siklus menentukan sektor mana yang biasanya unggul), bukan sebagai input perhitungan — Sector Rotation tetap dihitung murni dari kinerja relatif ETF.
+ 
+ ---
+ 
+diff --git a/02_LAYER1_SPECS/02_SECTOR_ROTATION.md b/02_LAYER1_SPECS/02_SECTOR_ROTATION.md
+index 3654b19..4a51b7b 100644
+--- a/02_LAYER1_SPECS/02_SECTOR_ROTATION.md
++++ b/02_LAYER1_SPECS/02_SECTOR_ROTATION.md
+@@ -1,6 +1,8 @@
+ # Sector Rotation
+ 
+-**Status:** Aktif
++**Status:** Aktif — revisi: kind ditambahkan (Prinsip #5)
++**Doc version:** 1.1.0
++**Kind:** direct
+ 
+ ## Definisi
+ 
+@@ -18,9 +20,15 @@ Yahoo Finance — harga & volume sector ETF (XLK, XLE, XLF, XLV, XLI, dst).
+ 
+ Bandingkan kinerja relatif tiap sector ETF terhadap index acuan (misal S&P 500) dalam beberapa rentang waktu (1 bulan, 3 bulan) untuk melihat sektor mana yang outperform/underperform.
+ 
+-## Dipakai Oleh
++## Input Dari
+ 
+-Quality/Compound Module (relevansi sektor jangka panjang), Multibagger Module (sektor yang sedang naik daun).
++Tidak ada komponen Layer 1 lain — dihitung dari harga sector ETF. Komponen leaf.
++
++Business Cycle Stage memberi konteks interpretasi, tapi bukan input perhitungan.
++
++## Digunakan Oleh
++
++Multibagger Module (sektor yang sedang naik daun), Quality/Compound Module (relevansi sektor jangka panjang).
+ 
+ ---
+ 
+diff --git a/02_LAYER1_SPECS/03_MONEY_FLOW.md b/02_LAYER1_SPECS/03_MONEY_FLOW.md
+index fd1ed49..792c4b3 100644
+--- a/02_LAYER1_SPECS/03_MONEY_FLOW.md
++++ b/02_LAYER1_SPECS/03_MONEY_FLOW.md
+@@ -1,6 +1,9 @@
+ # Money Flow
+ 
+-**Status:** Aktif
++**Status:** Aktif — revisi: method_version & kind ditambahkan (Prinsip #5, #6)
++**Doc version:** 1.1.0
++**Method version:** 1.0.0
++**Kind:** derived / approximated
+ 
+ ## Definisi
+ 
+@@ -18,9 +21,15 @@ Data resmi granular (EPFR, Lipper) berbayar. Pendekatan gratis: proxy dari volum
+ 
+ Gunakan kombinasi volume abnormal + pergerakan harga di sector ETF sebagai proxy arah aliran dana. Ini pendekatan derived/approximated, bukan data flow yang presisi.
+ 
+-## Dipakai Oleh
++## Input Dari
+ 
+-Sector Rotation (saling melengkapi), ketiga modul reasoning sebagai bagian dari konteks makro.
++Tidak ada komponen Layer 1 lain — dihitung dari volume & price action sector ETF. Komponen leaf.
++
++> Money Flow dan Sector Rotation sama-sama membaca sector ETF, tapi **tidak saling memberi input**. Versi sebelumnya menulis "saling melengkapi" — itu menggambarkan kedekatan tema, bukan aliran data.
++
++## Digunakan Oleh
++
++Ketiga modul reasoning sebagai bagian dari konteks makro.
+ 
+ ---
+ 
+diff --git a/02_LAYER1_SPECS/04_LIQUIDITY_CONDITIONS.md b/02_LAYER1_SPECS/04_LIQUIDITY_CONDITIONS.md
+index a20b6a0..5ed7548 100644
+--- a/02_LAYER1_SPECS/04_LIQUIDITY_CONDITIONS.md
++++ b/02_LAYER1_SPECS/04_LIQUIDITY_CONDITIONS.md
+@@ -1,6 +1,8 @@
+ # Liquidity Conditions
+ 
+-**Status:** Aktif
++**Status:** Aktif — revisi: kind ditambahkan (Prinsip #5)
++**Doc version:** 1.1.0
++**Kind:** direct
+ 
+ ## Definisi
+ 
+@@ -18,9 +20,13 @@ FRED — Fed balance sheet (total assets), M2 money supply growth, credit spread
+ 
+ Pantau tren Fed balance sheet dan M2 growth rate; kombinasikan dengan credit spread untuk membaca apakah kondisi sedang mengetat atau melonggar.
+ 
+-## Dipakai Oleh
++## Input Dari
+ 
+-Business Cycle Stage (saling terkait), Quality/Compound Module (biaya modal & valuasi jangka panjang).
++Tidak ada komponen Layer 1 lain — dihitung dari seri FRED. Komponen leaf.
++
++## Digunakan Oleh
++
++Quality/Compound Module (biaya modal & valuasi jangka panjang), ketiga modul sebagai konteks makro.
+ 
+ ---
+ 
+diff --git a/02_LAYER1_SPECS/05_YIELD_CURVE.md b/02_LAYER1_SPECS/05_YIELD_CURVE.md
+index f43a29b..e2d604d 100644
+--- a/02_LAYER1_SPECS/05_YIELD_CURVE.md
++++ b/02_LAYER1_SPECS/05_YIELD_CURVE.md
+@@ -1,6 +1,8 @@
+ # Yield Curve
+ 
+-**Status:** Aktif
++**Status:** Aktif — revisi: kind ditambahkan (Prinsip #5)
++**Doc version:** 1.1.0
++**Kind:** direct
+ 
+ ## Definisi
+ 
+@@ -18,9 +20,13 @@ FRED atau Treasury.gov — gratis, data resmi.
+ 
+ Ambil spread antar tenor kunci (misal 10Y-2Y) untuk menentukan apakah curve normal, flat, atau inverted.
+ 
+-## Dipakai Oleh
++## Input Dari
+ 
+-Business Cycle Stage, Quality/Compound Module (biaya modal), Liquidity Conditions (saling terkait).
++Tidak ada komponen Layer 1 lain — dihitung dari seri FRED/Treasury. Komponen leaf.
++
++## Digunakan Oleh
++
++Quality/Compound Module (biaya modal), ketiga modul sebagai konteks makro.
+ 
+ ---
+ 
+diff --git a/02_LAYER1_SPECS/06_MARKET_BREADTH.md b/02_LAYER1_SPECS/06_MARKET_BREADTH.md
+index 1ab3ebd..93cab31 100644
+--- a/02_LAYER1_SPECS/06_MARKET_BREADTH.md
++++ b/02_LAYER1_SPECS/06_MARKET_BREADTH.md
+@@ -1,6 +1,9 @@
+ # Market Breadth
+ 
+-**Status:** Aktif
++**Status:** Aktif — revisi: universe diputuskan (D-05), method_version ditambahkan
++**Doc version:** 2.0.0
++**Method version:** 1.0.0
++**Kind:** derived / approximated
+ 
+ ## Definisi
+ 
+@@ -10,17 +13,43 @@ Ukuran kesehatan sebuah rally — berapa banyak saham individual yang benar-bena
+ 
+ Index bisa terlihat naik padahal hanya digerakkan segelintir saham besar. Breadth mengungkap apakah kekuatan market itu luas atau sempit.
+ 
++## Universe: Hasil Screening Sendiri, Bukan S&P 500 (D-05)
++
++Versi sebelumnya menyebut "perlu daftar konstituen index (S&P 500/NASDAQ)", dan itu diperlakukan seolah tinggal disuplai. Ternyata bukan begitu masalahnya: **daftar konstituen S&P 500 resmi itu berlisensi** (S&P Dow Jones Indices). Yang gratis cuma scraping Wikipedia atau menebak dari holdings ETF. Jadi ini bukan input yang belum diberikan — sumber gratisnya memang tidak ada.
++
++**Keputusan:** breadth dihitung atas **universe hasil Screening sendiri** — seluruh NASDAQ + NYSE dari listing files, setelah hard exclude (`03_LAYER2_SPECS/01_SCREENING.md`).
++
++Alasannya bukan cuma karena gratis. Seluruh alasan Layer 2 menyaring market-wide adalah karena watchlist manual v1 membatasi apa yang bisa terlihat. Mengukur "kesehatan market" lewat 500 saham terbesar, lalu menganalisa saham di luar 500 itu, berarti konteksnya diukur dari populasi yang berbeda dari yang dianalisa. Memakai universe sendiri justru lebih konsisten dengan v2, bukan sekadar kompromi.
++
++Ambang hard exclude Screening (market cap > $30jt, dollar volume > $300rb, harga > $0.50) sudah membuang shell company dan ticker mati — persis noise yang bikin breadth mentah tidak bermakna.
++
++### Konsekuensi yang Diterima Secara Sadar
++
++Angkanya **tidak sebanding** dengan pembacaan breadth publik manapun ($ADD, "% saham di atas MA200" versi S&P). Breadth atas ~2.000 saham hasil screening akan sistematis berbeda dari breadth atas 500 mega-cap — terutama saat rally sempit, yang justru saat breadth paling berguna.
++
++Ini bukan bug, tapi **wajib dinyatakan di output** supaya tidak keliru dibaca sebagai indikator standar. Field `kind=derived` + `note` di `ComponentReading` (`01_ARCHITECTURE/04_DATA_CONTRACTS.md` §3) menampung ini.
++
+ ## Sumber Data
+ 
+-Tidak ada endpoint gratis siap pakai. Perlu daftar konstituen index (S&P 500/NASDAQ) lalu hitung sendiri dari harga tiap saham (Yahoo Finance).
++Listing files NASDAQ (`nasdaqlisted.txt`, `otherlisted.txt`) untuk universe; Yahoo Finance untuk harga tiap saham. Keduanya gratis, keduanya sudah dibutuhkan Screening — jadi tidak ada dependensi sumber baru.
+ 
+ ## Cara Hitung / Pendekatan
+ 
+-Hitung advance/decline ratio dan persentase saham yang berada di atas MA200 dari seluruh konstituen index. Ini derived/approximated — butuh banyak panggilan data, bukan 1 API call.
++Atas universe hasil hard exclude Screening:
++1. **Advance/decline ratio** — jumlah saham naik vs turun pada sesi terakhir.
++2. **Persentase di atas MA200** — porsi saham yang harganya di atas moving average 200 harinya.
++
++Derived/approximated — butuh banyak panggilan data, bukan 1 API call.
++
++> **Catatan biaya:** ini komponen Layer 1 paling mahal, dan satu-satunya yang butuh data harga seluruh universe. Ia memakai data harga historis yang **sudah di-cache** untuk Screening (`04_DATA_SOURCES/05_RATE_LIMIT_CACHING_STRATEGY.md`) — bukan tarikan terpisah. Kalau cache Screening belum terisi, breadth `status=missing`, bukan memicu ribuan call sendiri.
++
++## Input Dari
++
++Tidak ada komponen Layer 1 lain. Breadth adalah komponen leaf — ia cuma butuh harga & universe.
+ 
+-## Dipakai Oleh
++## Digunakan Oleh
+ 
+-Market Regime, Market Sentiment (saling melengkapi), ketiga modul sebagai indikator kesehatan market.
++Market Sentiment (sebagai salah satu dari empat input), ketiga modul Layer 2 sebagai indikator kesehatan market.
+ 
+ ---
+ 
+diff --git a/02_LAYER1_SPECS/07_VOLATILITY_INDEX.md b/02_LAYER1_SPECS/07_VOLATILITY_INDEX.md
+index d54aff1..c7de75b 100644
+--- a/02_LAYER1_SPECS/07_VOLATILITY_INDEX.md
++++ b/02_LAYER1_SPECS/07_VOLATILITY_INDEX.md
+@@ -1,6 +1,8 @@
+ # Volatility Index (VIX)
+ 
+-**Status:** Aktif
++**Status:** Aktif — revisi: kind ditambahkan (Prinsip #5)
++**Doc version:** 1.1.0
++**Kind:** direct
+ 
+ ## Definisi
+ 
+@@ -18,9 +20,13 @@ Yahoo Finance (`^VIX`) — gratis, langsung tersedia.
+ 
+ Ambil nilai VIX terkini dan bandingkan dengan rata-rata historisnya untuk menentukan level relatif (rendah/normal/tinggi).
+ 
+-## Dipakai Oleh
++## Input Dari
+ 
+-Market Sentiment (saling melengkapi), Speculative Module (paling sensitif terhadap risk appetite).
++Tidak ada — satu angka langsung dari Yahoo Finance (`^VIX`). Komponen leaf, `kind=direct`.
++
++## Digunakan Oleh
++
++**Market Sentiment** (input komputasi — salah satu dari empat), Speculative Module (paling sensitif terhadap risk appetite).
+ 
+ ---
+ 
+diff --git a/02_LAYER1_SPECS/08_MARKET_REGIME.md b/02_LAYER1_SPECS/08_MARKET_REGIME.md
+index 6fddff5..ffc8682 100644
+--- a/02_LAYER1_SPECS/08_MARKET_REGIME.md
++++ b/02_LAYER1_SPECS/08_MARKET_REGIME.md
+@@ -1,6 +1,8 @@
+ # Market Regime / Trend
+ 
+-**Status:** Aktif
++**Status:** Aktif — revisi: kind ditambahkan (Prinsip #5)
++**Doc version:** 1.1.0
++**Kind:** direct
+ 
+ ## Definisi
+ 
+@@ -18,9 +20,15 @@ Yahoo Finance — harga index utama (S&P 500, Nasdaq Composite).
+ 
+ Bandingkan posisi harga index terhadap MA50 dan MA200 untuk mengklasifikasikan regime.
+ 
+-## Dipakai Oleh
++## Input Dari
+ 
+-Market Breadth (saling melengkapi), Multibagger & Speculative Module (relevan untuk timing).
++Tidak ada komponen Layer 1 lain — dihitung dari harga index utama. Komponen leaf.
++
++> Market Regime dan Market Breadth sama-sama membaca kesehatan market dari sudut berbeda, tapi tidak saling memberi input. "Saling melengkapi" di versi sebelumnya menggambarkan tema, bukan dependensi.
++
++## Digunakan Oleh
++
++Multibagger & Speculative Module (relevan untuk timing).
+ 
+ ---
+ 
+diff --git a/02_LAYER1_SPECS/09_MACRO_CALENDAR.md b/02_LAYER1_SPECS/09_MACRO_CALENDAR.md
+index ad76cb2..6a5658e 100644
+--- a/02_LAYER1_SPECS/09_MACRO_CALENDAR.md
++++ b/02_LAYER1_SPECS/09_MACRO_CALENDAR.md
+@@ -1,6 +1,8 @@
+ # Macro Economic Calendar
+ 
+-**Status:** Aktif
++**Status:** Aktif — revisi: kind ditambahkan (Prinsip #5)
++**Doc version:** 1.1.0
++**Kind:** direct
+ 
+ ## Definisi
+ 
+@@ -18,7 +20,11 @@ FRED release calendar (gratis, resmi). Versi 'user-friendly' seperti di Investin
+ 
+ Tarik jadwal rilis data utama dari FRED, tandai tanggal-tanggal dengan potensi dampak tinggi.
+ 
+-## Dipakai Oleh
++## Input Dari
++
++Tidak ada — ditarik langsung dari FRED release calendar. Komponen leaf.
++
++## Digunakan Oleh
+ 
+ Semua modul Layer 2, sebagai penanda 'apakah saat ini mendekati periode volatil'.
+ 
+diff --git a/02_LAYER1_SPECS/10_CURRENCY_DXY.md b/02_LAYER1_SPECS/10_CURRENCY_DXY.md
+index 5707b49..672b7d3 100644
+--- a/02_LAYER1_SPECS/10_CURRENCY_DXY.md
++++ b/02_LAYER1_SPECS/10_CURRENCY_DXY.md
+@@ -1,6 +1,8 @@
+ # Currency / Dollar Index (DXY)
+ 
+-**Status:** Aktif
++**Status:** Aktif — revisi: kind ditambahkan (Prinsip #5)
++**Doc version:** 1.1.0
++**Kind:** direct
+ 
+ ## Definisi
+ 
+@@ -18,9 +20,13 @@ Yahoo Finance (`DX-Y.NYB`) — gratis, langsung tersedia.
+ 
+ Pantau tren DXY dan bandingkan dengan rata-rata historisnya.
+ 
+-## Dipakai Oleh
++## Input Dari
+ 
+-Commodity Signals (saling terkait), relevan untuk saham dengan eksposur global/komoditas di ketiga modul.
++Tidak ada — satu angka langsung dari Yahoo Finance (`DX-Y.NYB`). Komponen leaf, `kind=direct`.
++
++## Digunakan Oleh
++
++Ketiga modul, relevan untuk saham dengan eksposur global/komoditas. Commodity Signals bertema dekat tapi bukan konsumen — keduanya dibaca terpisah oleh modul.
+ 
+ ---
+ 
+diff --git a/02_LAYER1_SPECS/11_COMMODITY_SIGNALS.md b/02_LAYER1_SPECS/11_COMMODITY_SIGNALS.md
+index e58abf1..9ca7701 100644
+--- a/02_LAYER1_SPECS/11_COMMODITY_SIGNALS.md
++++ b/02_LAYER1_SPECS/11_COMMODITY_SIGNALS.md
+@@ -1,6 +1,8 @@
+ # Commodity Signals
+ 
+-**Status:** Aktif
++**Status:** Aktif — revisi: kind ditambahkan (Prinsip #5)
++**Doc version:** 1.1.0
++**Kind:** direct
+ 
+ ## Definisi
+ 
+@@ -18,9 +20,13 @@ Yahoo Finance — futures (`GC=F` emas, `CL=F` minyak).
+ 
+ Pantau tren harga dan volatilitas komoditas kunci ini.
+ 
+-## Dipakai Oleh
++## Input Dari
+ 
+-Currency/DXY (saling terkait), relevan untuk saham sektor energi/materials di ketiga modul.
++Tidak ada — harga futures langsung dari Yahoo Finance. Komponen leaf, `kind=direct`.
++
++## Digunakan Oleh
++
++Ketiga modul, relevan untuk saham sektor energi/materials.
+ 
+ ---
+ 
+diff --git a/02_LAYER1_SPECS/12_MARKET_SENTIMENT.md b/02_LAYER1_SPECS/12_MARKET_SENTIMENT.md
+index 4c4001d..2d33fe4 100644
+--- a/02_LAYER1_SPECS/12_MARKET_SENTIMENT.md
++++ b/02_LAYER1_SPECS/12_MARKET_SENTIMENT.md
+@@ -1,6 +1,9 @@
+ # Market Sentiment
+ 
+-**Status:** Aktif
++**Status:** Aktif — revisi: method_version & kind ditambahkan (Prinsip #5, #6)
++**Doc version:** 1.1.0
++**Method version:** 1.0.0
++**Kind:** derived / approximated
+ 
+ ## Definisi
+ 
+@@ -18,9 +21,22 @@ AAII Investor Sentiment Survey (mingguan, gratis), CBOE Put/Call Ratio (gratis,
+ 
+ Kombinasikan AAII survey + put/call ratio + VIX + market breadth menjadi satu pembacaan sentimen sendiri. Ini derived/approximated, bukan versi identik dari index komersial manapun.
+ 
+-## Dipakai Oleh
++## Input Dari
+ 
+-Volatility Index (saling melengkapi), Speculative Module (paling relevan untuk sentimen ekstrem sebagai sinyal kontrarian).
++**Satu-satunya komponen Layer 1 yang punya input dari komponen Layer 1 lain:**
++
++- **Volatility Index (VIX)** — wajib
++- **Market Breadth** — wajib
++
++Plus sumber luar: AAII survey, CBOE put/call ratio.
++
++Karena itu Market Sentiment **harus dihitung setelah** VIX dan Market Breadth selesai. Ini satu-satunya urutan yang mengikat di dalam Layer 1 — lihat `01_ARCHITECTURE/02_LAYER1_MARKET_CONTEXT.md` §5.
++
++Kalau VIX atau Breadth `status=missing`, Market Sentiment dihitung dari input yang tersisa dengan `status=degraded` + `note` yang menyebut input mana yang hilang — bukan `missing` total, dan bukan diam-diam berpura-pura lengkap.
++
++## Digunakan Oleh
++
++Speculative Module (paling relevan — sentimen ekstrem sebagai sinyal kontrarian), ketiga modul sebagai konteks risk appetite.
+ 
+ ---
+ 
+diff --git a/03_LAYER2_SPECS/03_KNOWLEDGE.md b/03_LAYER2_SPECS/03_KNOWLEDGE.md
+index b3f3a30..0ba9435 100644
+--- a/03_LAYER2_SPECS/03_KNOWLEDGE.md
++++ b/03_LAYER2_SPECS/03_KNOWLEDGE.md
+@@ -1,6 +1,7 @@
+ # Knowledge
+ 
+-**Status:** Aktif
++**Status:** Aktif — revisi: bagian 6 (Valuasi) & 7 (Governance & Peristiwa Filing) ditambahkan, field relatif-peer dikeluarkan (lihat D-01, D-02, D-03 di `00_Foundation/04_DECISIONS.md`)
++**Doc version:** 2.0.0
+ 
+ ## Definisi
+ 
+@@ -25,7 +26,7 @@ Alasannya struktural: ketiga modul reasoning (Multibagger, Quality/Compound, Spe
+ | Pertumbuhan | "Revenue CAGR 3 tahun: 24%" | "Pertumbuhan kuat" |
+ | Margin | "Gross margin turun dari 42% ke 37% dalam 8 kuartal" | "Profitabilitas melemah" |
+ | Kepemilikan | "Insider selling: 3 transaksi jual, total $2.1 juta, 45 hari terakhir" | "Insider kurang percaya diri" |
+-| Valuasi relatif | "P/E 34, median peer group 19" | "Terlalu mahal" |
++| Valuasi | "P/E 34, P/S 8.2, FCF yield 1.8%" | "Terlalu mahal" |
+ 
+ Aturan praktis: setiap field di Knowledge harus bisa dijawab tanpa kata sifat evaluatif — angka, tren, atau kategori berbasis ambang yang didefinisikan eksplisit (bukan judgment call implisit).
+ 
+@@ -37,29 +38,57 @@ Profil per ticker, lima bagian tetap (field kosong ditandai `null` + status `mis
+ 
+ **2. Kesehatan Finansial** — tren revenue (YoY 4 kuartal terakhir, CAGR 3 & 5 tahun kalau data cukup), tren margin (gross/operating/net, per kuartal), struktur balance sheet (debt-to-equity, current ratio, posisi kas), tren cash flow (FCF per kuartal, FCF margin).
+ 
+-**3. Posisi Kompetitif (deskriptif)** — kategori model bisnis kalau bisa ditentukan dari data (mis. subscription/hardware/marketplace), pangsa revenue relatif terhadap total peer group (angka, bukan predikat "dominan/kecil" — itu tugas Peer/Relative Comparison & modul reasoning).
++**3. Posisi Kompetitif (deskriptif)** — kategori model bisnis kalau bisa ditentukan dari data (mis. subscription/hardware/marketplace), konsentrasi revenue per segmen bisnis (dari 10-K kalau tersedia), skala absolut (revenue TTM, jumlah karyawan kalau ada).
++
++> **Catatan (D-03):** field "pangsa revenue relatif terhadap total peer group" **dikeluarkan** dari sini. Field itu membuat Knowledge butuh pengetahuan tentang ticker lain, padahal Peer/Relative Comparison justru beroperasi *di atas* Knowledge — melingkar. Semua angka relatif-peer sekarang hidup di output Peer (`06_PEER_RELATIVE_COMPARISON.md`), bukan di sini. Bagian 3 tinggal berisi hal-hal yang bisa dihitung dari Evidence ticker itu sendiri.
+ 
+ **4. Tren Historis** — performa harga (return 1/3/5 tahun), volatilitas historis (std dev harian, beta terhadap index), rekam jejak earnings (jumlah beat/miss dari N kuartal terakhir — angka faktual).
+ 
+ **5. Kepemilikan** — persentase kepemilikan institusional, persentase insider, daftar transaksi insider signifikan terbaru (tanggal, arah, jumlah — bukan interpretasi arahnya).
+ 
+-**Metadata** (menempel di setiap profil, bukan bagian terpisah): `evidence_snapshot_date`, daftar field yang berhasil diisi vs field yang diharapkan (jadi input langsung buat Confidence/Data Quality), daftar sumber Evidence yang dipakai.
++**6. Valuasi** — rasio valuasi absolut per ticker: P/E (trailing & forward kalau tersedia), P/S, EV/EBITDA, P/B, FCF yield. Semua **angka absolut saja** — perbandingan terhadap peer bukan di sini, tapi di `06_PEER_RELATIVE_COMPARISON.md` (D-02, D-03).
++
++Rasio yang secara matematis tidak bermakna diisi `null` + status `missing`, bukan angka negatif yang menyesatkan — mis. P/E untuk perusahaan yang rugi, EV/EBITDA saat EBITDA negatif. Ini kasus `missing` yang **wajar dan informatif**, bukan kegagalan data: Confidence tidak boleh menghukumnya sekeras data yang hilang karena provider gagal, karena keduanya beda arti. Modul reasoning yang memutuskan artinya (Speculative mungkin tidak peduli; Quality/Compound mungkin sangat peduli).
++
++**7. Governance & Peristiwa Filing** — bahan baku Risk/Red-Flag Check, diturunkan dari Evidence 1.5 (SEC filings) & 1.4 (berita):
++
++- Tren shares outstanding (perubahan % dalam 12 bulan terakhir — bahan deteksi dilusi)
++- Riwayat pergantian auditor (tanggal, dari-ke, sumber filing)
++- Restatement laporan keuangan (tanggal, periode yang direstate)
++- Litigasi material yang tercatat di filing (jenis, status, tanggal)
++- Filing tidak biasa lainnya (mis. 8-K item 4.01, late filing/NT 10-K)
++
++Semua tetap tunduk aturan yang sama: fakta dan tanggal, **tanpa kata sifat evaluatif**. "Auditor berganti 2 kali dalam 3 tahun" itu Knowledge; "governance lemah" itu bukan — itu wewenang Risk/Red-Flag Check dan modul reasoning.
++
++> **Kenapa bagian ini ada (D-01):** sebelum revisi ini, Risk/Red-Flag Check menyebut sumbernya "Knowledge & Evidence" — padahal dokumen ini menutup dengan aturan bahwa Risk beroperasi di atas Knowledge, bukan Evidence mentah. Dua-duanya tidak bisa benar. Akarnya: Risk butuh field yang memang tidak ada di skema ini, jadi ia terpaksa menjangkau Evidence. Bagian 7 menutup lubang itu supaya invariant satu arah tetap utuh — dan sebagai bonus, Confidence jadi bisa mengukur kelengkapan data governance, yang mustahil selama field-nya cuma hidup di Evidence.
++
++**Metadata** (menempel di setiap profil, bukan bagian terpisah): `evidence_snapshot_date`, `method_version`, daftar field yang berhasil diisi vs field yang diharapkan (jadi input langsung buat Confidence/Data Quality), daftar sumber Evidence yang dipakai.
+ 
+ ## Data Hilang / Tidak Lengkap
+ 
+ Kalau Evidence tidak menyediakan data untuk suatu field (mis. data institutional kosong untuk saham yang baru IPO), field itu diisi `null` dan ditandai status `missing` — **tidak** diisi dengan estimasi, rata-rata industri, atau asumsi apa pun. Knowledge tidak menutupi kekosongan data; itu tugas Confidence/Data Quality untuk menandai dampaknya, dan modul reasoning yang memutuskan cara menyikapinya (mis. anggap netral, atau turunkan keyakinan pada bagian yang terkait).
+ 
++## Invariant: Knowledge Murni Per-Ticker
++
++**`KnowledgeProfile` suatu ticker harus bisa dihitung dengan hanya Evidence ticker itu di tangan.** Tidak ada field yang membutuhkan pengetahuan tentang ticker lain, tentang sektornya secara agregat, atau tentang hasil screening keseluruhan.
++
++Ini bukan preferensi gaya — ini yang membuat pipeline Fase A bisa jalan paralel per ticker tanpa koordinasi, dan yang memutus lingkaran Knowledge↔Peer (D-03). Gampang dites: jalankan Knowledge dengan Evidence satu ticker saja. Kalau gagal, atau ada field yang harusnya terisi malah kosong, invariant-nya sudah bocor.
++
++Satu-satunya "pengetahuan luar" yang boleh masuk adalah `screening_flags` — dan itu diteruskan apa adanya dari Screening tentang ticker ini sendiri, bukan hasil perbandingan dengan ticker lain.
++
+ ## Cara Kerja
+ 
+ 1. Ambil seluruh Evidence per ticker.
+ 2. Hitung tiap field di skema di atas — murni turunan matematis/kategorisasi berbasis ambang, tanpa kata sifat evaluatif.
+ 3. Field yang datanya tidak tersedia diisi `null` + status `missing`, bukan diinterpolasi.
+-4. Lampirkan metadata (tanggal snapshot, rasio kelengkapan field, daftar sumber) di setiap profil.
++4. Lampirkan metadata (tanggal snapshot, `method_version`, rasio kelengkapan field, daftar sumber) di setiap profil.
+ 5. Profil yang sudah lengkap ini menjadi input seragam untuk Confidence/Data Quality, Peer/Relative Comparison, Risk/Red-Flag Check, dan ketiga modul reasoning.
+ 
+ ## Terhubung Dengan
+ 
+-Confidence/Data Quality, Peer/Relative Comparison, Risk/Red-Flag Check — semua beroperasi di atas Knowledge, bukan Evidence mentah.
++Confidence/Data Quality, Peer/Relative Comparison, Risk/Red-Flag Check — semua beroperasi di atas Knowledge, bukan Evidence mentah. Sejak bagian 7 ada (D-01), aturan ini berlaku **tanpa pengecualian**: Risk tidak lagi perlu menjangkau Evidence.
++
++Bentuk paketnya dikunci di `01_ARCHITECTURE/04_DATA_CONTRACTS.md` §4.
+ 
+ ---
+ 
+diff --git a/03_LAYER2_SPECS/04_RISK_REDFLAG_CHECK.md b/03_LAYER2_SPECS/04_RISK_REDFLAG_CHECK.md
+index b4cfbc4..2375f9c 100644
+--- a/03_LAYER2_SPECS/04_RISK_REDFLAG_CHECK.md
++++ b/03_LAYER2_SPECS/04_RISK_REDFLAG_CHECK.md
+@@ -1,6 +1,7 @@
+ # Risk / Red-Flag Check
+ 
+-**Status:** Aktif — revisi untuk konsistensi dengan Prinsip #4 (`00_Foundation/02_PRINCIPLES.md`)
++**Status:** Aktif — revisi: sumber data dikoreksi jadi Knowledge saja (D-01), tiap flag dipetakan ke field Knowledge, bentuk Flag dikunci
++**Doc version:** 2.0.0
+ 
+ ## Definisi
+ 
+@@ -12,7 +13,26 @@ Tanpa pemeriksaan eksplisit, risiko besar (kecurangan akuntansi, dilusi ekstrem,
+ 
+ ## Sumber Data / Pendekatan
+ 
+-Diturunkan dari Knowledge & Evidence — mencari pola seperti auditor berganti-ganti, restatement laporan keuangan, insider selling besar-besaran, dilusi saham berlebihan.
++Diturunkan **dari Knowledge saja** — tidak menjangkau Evidence mentah, tidak memanggil provider apa pun.
++
++> **Koreksi (D-01):** versi sebelumnya menulis "Diturunkan dari Knowledge & Evidence", yang bertentangan langsung dengan aturan di `03_KNOWLEDGE.md` bahwa Risk beroperasi di atas Knowledge, bukan Evidence mentah. Penyebabnya bukan kalimatnya — tapi skemanya: field yang dibutuhkan Risk (tren shares outstanding, pergantian auditor, restatement, litigasi) memang belum punya rumah di Knowledge, jadi Risk terpaksa menjangkau ke belakang. Sejak Knowledge punya **bagian 7 — Governance & Peristiwa Filing**, lubang itu tertutup dan Risk cukup membaca Knowledge.
++
++### Pemetaan Flag → Field Knowledge
++
++Tiap pemeriksaan wajib menyebut field Knowledge yang dipakainya. Kalau sebuah flag tidak bisa dipetakan ke field yang ada, itu tanda skema Knowledge kurang — bukan izin untuk menjangkau Evidence.
++
++| Pemeriksaan | Field Knowledge |
++|---|---|
++| Dilusi saham berlebihan | bagian 7 → tren shares outstanding (12 bulan) |
++| Auditor berganti > 1x / 3 tahun | bagian 7 → riwayat pergantian auditor |
++| Restatement 2 tahun terakhir | bagian 7 → riwayat restatement |
++| Litigasi material berjalan | bagian 7 → litigasi tercatat di filing |
++| Insider selling besar-besaran | bagian 5 → daftar transaksi insider signifikan |
++| Fraud terkonfirmasi / delisting | bagian 7 → filing tidak biasa + bagian 1 → status instrumen |
++
++### Data Governance yang `missing`
++
++Kalau field bagian 7 berstatus `missing` (mis. filing tidak bisa ditarik), pemeriksaan terkait menghasilkan `status: undetermined` — **bukan** "tidak ada red flag". Bedanya penting: "tidak ketemu masalah" dan "tidak sempat melihat" adalah dua hal yang sangat berbeda, dan modul reasoning berhak tahu yang mana. `undetermined` wajib masuk ke `knowledge_gaps` di output modul (lihat `01_ARCHITECTURE/04_DATA_CONTRACTS.md` §6, aturan V4).
+ 
+ ## Kategori Red Flag (Ilustratif — Perlu Dilengkapi Saat Implementasi)
+ 
+@@ -31,11 +51,34 @@ Dipecah jadi dua tingkat severity, konsisten dengan Prinsip #4:
+ 
+ Daftar ini ilustratif dan perlu divalidasi/dikalibrasi lebih detail sebelum implementasi — ambang kuantitatif spesifik (persentase, nilai dolar, jangka waktu) belum final.
+ 
++## Bentuk Flag
++
++```
++Flag {
++  flag_id        : string        # stabil & unik, mis. "dilution_12m"
++  category       : enum{accounting, governance, litigation, dilution, insider, listing_status}
++  severity       : enum{tinggi, ekstrem}
++  status         : enum{triggered, undetermined}
++  knowledge_refs : [string]      # field Knowledge yang memicunya
++  evidence_note  : string        # fakta pemicunya, bukan penilaian
++  method_version : semver
++}
++```
++
++`flag_id` harus **stabil lintas sesi** — inilah yang dirujuk `flag_responses[].flag_id` di output modul, dan yang dipakai audit historis untuk membandingkan flag yang sama antar waktu. Kalau `flag_id` berubah karena refactor, entri historis lama jadi tidak bisa dicocokkan.
++
+ ## Cara Kerja
+ 
+ Jalankan serangkaian pemeriksaan pola red flag terhadap Knowledge, hasilkan flag dengan tingkat severity di atas.
+ 
+-**Untuk flag Severity Tinggi:** flag ditempelkan ke Knowledge sebagai data terstruktur (kategori, severity, evidence pendukung) yang terlihat oleh ketiga modul reasoning. "Wajib direspons" berarti tiap modul harus menyatakan secara eksplisit bagaimana flag ini memengaruhi kesimpulannya — baik lewat pembatasan confidence, catatan reasoning yang menyebutnya secara spesifik, atau penyesuaian penilaian. Modul tidak boleh menghasilkan kesimpulan yang diam-diam mengabaikan flag yang ada.
++**Untuk flag Severity Tinggi:** flag ditempelkan ke Knowledge sebagai data terstruktur yang terlihat oleh ketiga modul reasoning. "Wajib direspons" berarti tiap modul harus menyatakan secara eksplisit bagaimana flag ini memengaruhi kesimpulannya — lewat pembatasan confidence, catatan reasoning yang menyebutnya secara spesifik, atau penyesuaian penilaian. Modul tidak boleh menghasilkan kesimpulan yang diam-diam mengabaikan flag yang ada.
++
++Sejak revisi ini, "wajib" itu **ditegakkan secara mekanis**, bukan diharapkan (lihat `01_ARCHITECTURE/04_DATA_CONTRACTS.md` §6):
++
++- **V1** — output modul yang jumlah `flag_responses`-nya tidak cocok dengan jumlah flag severity tinggi **ditolak**.
++- **V2** — rationale yang identik untuk dua flag berbeda ditandai `generic_response` untuk direview.
++
++V2 ada karena V1 saja gampang dipenuhi dengan menyalin kalimat yang sama tiga kali — dan log progres 14 Juli sudah mencatat gejalanya duluan ("respons red-flag di 3 modul masih level umum, belum spesifik per jenis flag"). V1 memaksa modul menjawab; V2 memaksa jawabannya benar-benar berbeda.
+ 
+ **Untuk flag Severity Ekstrem:** proses berhenti di titik ini — saham tetap tercatat (dengan alasan berhenti tercantum), tapi tidak diteruskan ke tiga modul reasoning. Ini pengecualian eksplisit terhadap perilaku default "tidak menghentikan proses" di atas.
+ 
+diff --git a/03_LAYER2_SPECS/06_PEER_RELATIVE_COMPARISON.md b/03_LAYER2_SPECS/06_PEER_RELATIVE_COMPARISON.md
+index 966c5fc..b057c76 100644
+--- a/03_LAYER2_SPECS/06_PEER_RELATIVE_COMPARISON.md
++++ b/03_LAYER2_SPECS/06_PEER_RELATIVE_COMPARISON.md
+@@ -1,6 +1,7 @@
+ # Peer / Relative Comparison
+ 
+-**Status:** Aktif
++**Status:** Aktif — revisi: posisi di pipeline diperjelas (barrier Fase A/B), ambang minimum peer group, penanganan peer gagal, kontrak output (D-03)
++**Doc version:** 2.0.0
+ 
+ ## Definisi
+ 
+@@ -8,19 +9,75 @@ Perbandingan suatu saham dengan kompetitor atau industri sejenis, bukan dievalua
+ 
+ ## Kenapa Penting
+ 
+-Sebuah angka (misal margin, ROE) sulit dinilai 'bagus' atau 'jelek' tanpa konteks pembanding — bagus secara absolut belum tentu bagus relatif terhadap industrinya.
++Sebuah angka (misal margin, ROE, P/E) sulit dinilai 'bagus' atau 'jelek' tanpa konteks pembanding — bagus secara absolut belum tentu bagus relatif terhadap industrinya.
++
++Sejak D-03, komponen ini juga jadi **satu-satunya tempat angka relatif-peer hidup**. Knowledge sengaja dibuat murni per-ticker; semua yang butuh membandingkan antar ticker ada di sini.
++
++## Posisi di Pipeline: Kenapa Ada Barrier
++
++Ini bagian yang paling sering disalahpahami dari diagram lama.
++
++Diagram sebelumnya menggambar `Knowledge → [Confidence + Peer] → Risk` seolah alur lurus per ticker. Itu tidak mungkin: **Peer butuh Knowledge saham lain**. Selama Knowledge ticker sesektor belum jadi, Peer untuk ticker ini tidak bisa dihitung. Jadi pipeline Layer 2 sebenarnya dua fase, bukan satu:
++
++```
++Fase A  (per-ticker, bisa paralel penuh)
++  Evidence → Knowledge
++
++  ═══════════ barrier ═══════════
++  tunggu Knowledge SELURUH kandidat selesai
++
++Fase B  (butuh populasi)
++  Peer → Confidence → Risk → 3 modul → Aggregator
++```
++
++Barrier ini bukan pilihan desain — ia konsekuensi tak terhindarkan dari memakai populasi hasil screening sendiri sebagai sumber peer. Menggambarnya eksplisit lebih baik daripada menemukannya saat implementasi.
++
++### Konsekuensi yang harus disadari
++
++- **Peer tidak bisa jalan streaming.** Analisa satu ticker tunggal (mis. lewat CLI `analyze AAPL`) tidak punya populasi. Untuk kasus itu, `peer_tickers` disuplai manual oleh caller, dan `peer_group_basis` ditandai `manual` — bukan `screening_universe`. Bedanya harus terlihat di output, karena kualitas peer group-nya beda jauh.
++- **Memori.** Fase A menghasilkan Knowledge untuk ~1.500–3.000 kandidat yang semuanya harus ada sebelum Fase B mulai. Ini pertama kalinya pipeline butuh menahan populasi utuh di satu titik — perlu masuk hitungan saat implementasi.
+ 
+ ## Sumber Data / Pendekatan
+ 
+-Knowledge dari saham-saham lain di sektor/industri yang sama (hasil dari proses Screening & Evidence yang sama).
++Knowledge dari saham-saham lain di sektor/industri yang sama (hasil dari proses Screening & Evidence yang sama). Tidak menarik data baru, tidak memanggil provider — sama seperti Knowledge, Peer murni turunan.
+ 
+ ## Cara Kerja
+ 
+-Identifikasi grup peer berdasarkan klasifikasi sektor/industri, lalu bandingkan metrik kunci saham target terhadap median/rata-rata grup peer-nya.
++1. Kelompokkan kandidat berdasarkan klasifikasi sektor/industri (bagian 1 Knowledge).
++2. Untuk tiap ticker target, ambil peer group-nya.
++3. Bandingkan metrik kunci terhadap **median** grup (bukan rata-rata — median tahan terhadap outlier, dan peer group saham hampir selalu punya outlier).
++4. Hasilkan percentile posisi ticker di grupnya.
++5. Tandai kalau grup terlalu kecil (lihat di bawah).
++
++### Ambang Minimum Peer Group
++
++| Ukuran grup | Perlakuan |
++|---|---|
++| ≥ 5 | Normal |
++| 3 – 4 | `low_sample_size` — hasil tetap dipakai, Confidence bagian relatif diturunkan, modul yang memakainya wajib menyebut |
++| < 3 | Perbandingan **tidak dihitung**. Metrik diisi `null` + status `missing`, bukan dipaksakan |
++
++Median dari 2 saham bukan median — itu rata-rata dua angka yang kebetulan bertetangga. Memaksakan angka di situ menghasilkan sesuatu yang terlihat presisi tapi tidak berarti apa-apa, dan itu persis jenis kepalsuan yang Prinsip #5 ingin cegah.
++
++> Ambang ini konsisten dengan implementasi yang sudah ada (`peer_comparison.py` menandai `low_sample_size` saat peer group < 3). Yang berubah di spec: batas < 3 sekarang **tidak menghitung sama sekali**, bukan menghitung sambil menandai.
++
++### Peer yang Gagal Ditarik
++
++Peer yang datanya gagal diambil dicatat eksplisit di `peer_failures`, **tidak di-skip diam-diam**. Alasannya: peer group yang menyusut dari 8 jadi 3 karena kegagalan data menghasilkan median yang beda jauh dari peer group yang memang cuma 3 — dan tanpa catatan, dua kondisi itu tidak bisa dibedakan di kemudian hari.
++
++## Output
++
++Bentuk lengkapnya dikunci di `01_ARCHITECTURE/04_DATA_CONTRACTS.md` §5 (`PeerComparisonResult`).
++
++## Yang Masih Perlu Diputuskan
++
++- **Sumber klasifikasi sektor/industri.** Yahoo Finance punya sektor & industri, tapi granularitasnya kasar dan kadang aneh (perusahaan yang sama bisa dikategorikan beda dari GICS). Perlu dites: apakah grup yang dihasilkan masuk akal, atau butuh penyesuaian manual per sektor.
++- **Metrik mana saja yang dibandingkan.** Kandidat: margin (gross/operating/net), ROE, revenue growth, rasio valuasi (bagian 6 Knowledge), debt-to-equity. Daftar final menunggu kriteria tiga modul selesai — percuma menghitung relatif untuk metrik yang tidak ada modul yang memakainya.
++- **Peer discovery otomatis.** Saat ini `peer_tickers` masih disuplai manual oleh caller. Dengan Fase B beroperasi di atas populasi screening, ini semestinya bisa otomatis — tapi biaya komputasinya belum dihitung.
+ 
+ ## Terhubung Dengan
+ 
+-Quality/Compound Module (paling relevan untuk menilai keunggulan kompetitif relatif).
++Knowledge (input, seluruh populasi Fase A), Confidence/Data Quality (menerima `low_sample_size` & `peer_failures` sebagai penurun skor bagian relatif), Quality/Compound Module (konsumen utama — paling relevan untuk menilai keunggulan kompetitif relatif), Multibagger & Speculative (konsumen sekunder, terutama untuk valuasi relatif).
+ 
+ ---
+ 
+diff --git a/03_LAYER2_SPECS/07_MODULE_MULTIBAGGER.md b/03_LAYER2_SPECS/07_MODULE_MULTIBAGGER.md
+index 21611f8..22fddf9 100644
+--- a/03_LAYER2_SPECS/07_MODULE_MULTIBAGGER.md
++++ b/03_LAYER2_SPECS/07_MODULE_MULTIBAGGER.md
+@@ -1,6 +1,7 @@
+ # Module — Multibagger
+ 
+-**Status:** Aktif
++**Status:** Aktif — revisi: kontrak output & aturan validasi flag ditambahkan (D-04)
++**Doc version:** 2.0.0
+ 
+ ## Definisi
+ 
+@@ -18,6 +19,30 @@ Knowledge + Market Context Package, terutama Sector Rotation dan Business Cycle
+ 
+ Reasoning modul ini menilai: skala pasar (TAM), tingkat pertumbuhan pendapatan, skalabilitas model bisnis, potensi ekspansi. Detail kriteria & bobot didiskusikan terpisah sebelum implementasi.
+ 
++## Kontrak Output (Mengikat)
++
++Modul ini menghasilkan `ModuleOutput` — bentuknya dikunci di `01_ARCHITECTURE/04_DATA_CONTRACTS.md` §6, **identik** untuk ketiga modul.
++
++Bentuk yang sama untuk ketiganya bukan kompromi terhadap Prinsip #3 — justru sebaliknya. Wadah yang seragam membuat ketiga pandangan bisa ditampilkan berdampingan dan dibandingkan **tanpa harus disamakan isinya**. Yang wajib berbeda antar modul adalah kriteria, bobot, dan kesimpulannya; bukan struktur laporannya.
++
++Aturan validasi yang berlaku ke modul ini (output **ditolak** kalau gagal):
++
++| # | Aturan |
++|---|---|
++| V1 | Ada tepat satu entri `flag_responses` untuk setiap flag severity tinggi di Knowledge |
++| V2 | `rationale` tiap flag_response spesifik per flag — rationale identik di ≥2 flag ditandai `generic_response` |
++| V3 | `confidence.band != high` → `limiters` tidak boleh kosong |
++| V4 | Field Knowledge berstatus `missing` yang relevan dengan kriteria modul ini wajib muncul di `knowledge_gaps` |
++| V5 | `stance = not_applicable` wajib disertai `stance_rationale` |
++
++`context_used` wajib menyebut komponen Layer 1 mana yang benar-benar mempengaruhi `stance` — terutama Sector Rotation & Business Cycle Stage. Kalau `kind=derived` (mis. business_cycle_stage, market_sentiment), modul wajib memperlakukannya sebagai pembacaan yang dikonstruksi, bukan angka otoritatif (Prinsip #5).
++
++## Independensi
++
++Modul ini **tidak boleh** memanggil, membaca state, atau bergantung pada urutan eksekusi terhadap dua modul lain (Prinsip #3). Dites lewat T1 & T2 di `01_ARCHITECTURE/04_DATA_CONTRACTS.md` §6.
++
++Kalau nanti ketiga modul berbagi komponen (prompt/template reasoning yang sama), komponen bersama itu wajib dicek tidak diam-diam menyamakan kesimpulan — kalau iya, Multi-Lens tinggal klaim di atas kertas.
++
+ ## Terhubung Dengan
+ 
+ Menerima Market Context dari Layer 1, Knowledge dari Layer 2. Hasilnya masuk ke Aggregator.
+diff --git a/03_LAYER2_SPECS/08_MODULE_QUALITY_COMPOUND.md b/03_LAYER2_SPECS/08_MODULE_QUALITY_COMPOUND.md
+index 615c2ee..2f43f9e 100644
+--- a/03_LAYER2_SPECS/08_MODULE_QUALITY_COMPOUND.md
++++ b/03_LAYER2_SPECS/08_MODULE_QUALITY_COMPOUND.md
+@@ -1,6 +1,7 @@
+ # Module — Quality / Compound
+ 
+-**Status:** Aktif
++**Status:** Aktif — revisi: kontrak output & aturan validasi flag ditambahkan (D-04)
++**Doc version:** 2.0.0
+ 
+ ## Definisi
+ 
+@@ -18,6 +19,30 @@ Knowledge + Market Context Package, terutama Yield Curve dan Liquidity Condition
+ 
+ Reasoning modul ini menilai: kekuatan moat kompetitif, konsistensi ROE/margin, kualitas balance sheet, rekam jejak alokasi modal manajemen. Detail kriteria & bobot didiskusikan terpisah sebelum implementasi.
+ 
++## Kontrak Output (Mengikat)
++
++Modul ini menghasilkan `ModuleOutput` — bentuknya dikunci di `01_ARCHITECTURE/04_DATA_CONTRACTS.md` §6, **identik** untuk ketiga modul.
++
++Bentuk yang sama untuk ketiganya bukan kompromi terhadap Prinsip #3 — justru sebaliknya. Wadah yang seragam membuat ketiga pandangan bisa ditampilkan berdampingan dan dibandingkan **tanpa harus disamakan isinya**. Yang wajib berbeda antar modul adalah kriteria, bobot, dan kesimpulannya; bukan struktur laporannya.
++
++Aturan validasi yang berlaku ke modul ini (output **ditolak** kalau gagal):
++
++| # | Aturan |
++|---|---|
++| V1 | Ada tepat satu entri `flag_responses` untuk setiap flag severity tinggi di Knowledge |
++| V2 | `rationale` tiap flag_response spesifik per flag — rationale identik di ≥2 flag ditandai `generic_response` |
++| V3 | `confidence.band != high` → `limiters` tidak boleh kosong |
++| V4 | Field Knowledge berstatus `missing` yang relevan dengan kriteria modul ini wajib muncul di `knowledge_gaps` |
++| V5 | `stance = not_applicable` wajib disertai `stance_rationale` |
++
++`context_used` wajib menyebut komponen Layer 1 mana yang benar-benar mempengaruhi `stance` — terutama Yield Curve & Liquidity Conditions. Kalau `kind=derived` (mis. business_cycle_stage, market_sentiment), modul wajib memperlakukannya sebagai pembacaan yang dikonstruksi, bukan angka otoritatif (Prinsip #5).
++
++## Independensi
++
++Modul ini **tidak boleh** memanggil, membaca state, atau bergantung pada urutan eksekusi terhadap dua modul lain (Prinsip #3). Dites lewat T1 & T2 di `01_ARCHITECTURE/04_DATA_CONTRACTS.md` §6.
++
++Kalau nanti ketiga modul berbagi komponen (prompt/template reasoning yang sama), komponen bersama itu wajib dicek tidak diam-diam menyamakan kesimpulan — kalau iya, Multi-Lens tinggal klaim di atas kertas.
++
+ ## Terhubung Dengan
+ 
+ Menerima Market Context dari Layer 1, Knowledge & Peer Comparison dari Layer 2. Hasilnya masuk ke Aggregator.
+diff --git a/03_LAYER2_SPECS/09_MODULE_SPECULATIVE.md b/03_LAYER2_SPECS/09_MODULE_SPECULATIVE.md
+index abbe066..55e094b 100644
+--- a/03_LAYER2_SPECS/09_MODULE_SPECULATIVE.md
++++ b/03_LAYER2_SPECS/09_MODULE_SPECULATIVE.md
+@@ -1,6 +1,7 @@
+ # Module — Speculative
+ 
+-**Status:** Aktif
++**Status:** Aktif — revisi: kontrak output & aturan validasi flag ditambahkan (D-04)
++**Doc version:** 2.0.0
+ 
+ ## Definisi
+ 
+@@ -18,6 +19,30 @@ Knowledge + Market Context Package, terutama VIX dan Market Sentiment sebagai in
+ 
+ Reasoning modul ini menilai: ada tidaknya katalis konkret dan waktunya, besaran potensi upside vs downside, kondisi risk appetite market saat ini. Detail kriteria & bobot didiskusikan terpisah sebelum implementasi.
+ 
++## Kontrak Output (Mengikat)
++
++Modul ini menghasilkan `ModuleOutput` — bentuknya dikunci di `01_ARCHITECTURE/04_DATA_CONTRACTS.md` §6, **identik** untuk ketiga modul.
++
++Bentuk yang sama untuk ketiganya bukan kompromi terhadap Prinsip #3 — justru sebaliknya. Wadah yang seragam membuat ketiga pandangan bisa ditampilkan berdampingan dan dibandingkan **tanpa harus disamakan isinya**. Yang wajib berbeda antar modul adalah kriteria, bobot, dan kesimpulannya; bukan struktur laporannya.
++
++Aturan validasi yang berlaku ke modul ini (output **ditolak** kalau gagal):
++
++| # | Aturan |
++|---|---|
++| V1 | Ada tepat satu entri `flag_responses` untuk setiap flag severity tinggi di Knowledge |
++| V2 | `rationale` tiap flag_response spesifik per flag — rationale identik di ≥2 flag ditandai `generic_response` |
++| V3 | `confidence.band != high` → `limiters` tidak boleh kosong |
++| V4 | Field Knowledge berstatus `missing` yang relevan dengan kriteria modul ini wajib muncul di `knowledge_gaps` |
++| V5 | `stance = not_applicable` wajib disertai `stance_rationale` |
++
++`context_used` wajib menyebut komponen Layer 1 mana yang benar-benar mempengaruhi `stance` — terutama VIX & Market Sentiment. Kalau `kind=derived` (mis. business_cycle_stage, market_sentiment), modul wajib memperlakukannya sebagai pembacaan yang dikonstruksi, bukan angka otoritatif (Prinsip #5).
++
++## Independensi
++
++Modul ini **tidak boleh** memanggil, membaca state, atau bergantung pada urutan eksekusi terhadap dua modul lain (Prinsip #3). Dites lewat T1 & T2 di `01_ARCHITECTURE/04_DATA_CONTRACTS.md` §6.
++
++Kalau nanti ketiga modul berbagi komponen (prompt/template reasoning yang sama), komponen bersama itu wajib dicek tidak diam-diam menyamakan kesimpulan — kalau iya, Multi-Lens tinggal klaim di atas kertas.
++
+ ## Terhubung Dengan
+ 
+ Menerima Market Context dari Layer 1, Knowledge dari Layer 2, dan bekerja sama erat dengan Catalyst Tracking. Hasilnya masuk ke Aggregator.
+diff --git a/03_LAYER2_SPECS/11_AGGREGATOR_OUTPUT.md b/03_LAYER2_SPECS/11_AGGREGATOR_OUTPUT.md
+index a77b827..fc70130 100644
+--- a/03_LAYER2_SPECS/11_AGGREGATOR_OUTPUT.md
++++ b/03_LAYER2_SPECS/11_AGGREGATOR_OUTPUT.md
+@@ -1,6 +1,7 @@
+ # Aggregator & Output
+ 
+-**Status:** Aktif
++**Status:** Aktif — revisi: kontrak output, urutan tampilan ditetapkan, larangan field verdict (D-04)
++**Doc version:** 2.0.0
+ 
+ ## Definisi
+ 
+@@ -12,15 +13,39 @@ Ini adalah implementasi langsung dari Prinsip #3 (Multi-Lens, Bukan Single-Verdi
+ 
+ ## Sumber Data / Pendekatan
+ 
+-Menerima output dari ketiga modul reasoning, beserta Confidence Score dan flag dari Risk/Red-Flag Check.
++Menerima `ModuleOutput` dari ketiga modul reasoning, beserta Confidence Score dan flag dari Risk/Red-Flag Check.
+ 
+ ## Cara Kerja
+ 
+ Susun ketiga hasil reasoning berdampingan tanpa mengubah kesimpulan masing-masing modul. Sertakan Confidence Score dan Risk flag secara eksplisit di output, bukan disembunyikan.
+ 
++Bentuk paketnya dikunci di `01_ARCHITECTURE/04_DATA_CONTRACTS.md` §7 (`AggregatorOutput`).
++
++## Urutan Tampilan
++
++`module_outputs` **selalu** berurutan tetap: `multibagger`, `quality_compound`, `speculative`.
++
++Ini keputusan sadar, bukan default yang kebetulan. Alternatifnya — mengurutkan berdasarkan `confidence` atau `stance` — terdengar netral tapi justru menyelundupkan peringkat lewat pintu belakang: modul yang tampil paling atas otomatis terbaca sebagai "jawabannya". Itu single-verdict yang menyamar jadi tata letak, dan seluruh Prinsip #3 dibuat untuk mencegahnya.
++
++Urutan tetap tetap punya bias anchoring — yang pertama dibaca duluan, dan Multibagger akan selalu dapat perhatian pertama. Bedanya: bias itu **konstan**, sama untuk semua saham, jadi tidak bisa disalahartikan sebagai sinyal tentang saham ini. Bias yang konstan bisa dikenali dan dikompensasi pembaca. Bias yang berubah-ubah per saham tidak bisa — ia terlihat seperti informasi.
++
++## Yang Tidak Boleh Ada di Output
++
++`AggregatorOutput` **dilarang** punya field `verdict`, `score`, `rank`, `recommendation`, atau turunan apa pun yang meringkas tiga pandangan jadi satu.
++
++Ini bukan "belum sempat" — ini tugas yang sengaja tidak diberikan (`01_ARCHITECTURE/01_SYSTEM_OVERVIEW.md` §3: *"Aggregator tidak menyimpulkan"*). Ditulis sebagai larangan eksplisit karena inilah tekanan yang paling mudah menyerah di fase implementasi: satu angka ringkasan selalu terasa lebih enak dipakai daripada tiga pandangan yang harus dibaca. Persis itu yang bikin v1 gagal.
++
++Kalau suatu saat ini dilanggar, lakukan lewat entri baru di `00_Foundation/04_DECISIONS.md` yang membatalkan D-04 secara eksplisit — bukan diam-diam saat implementasi.
++
++## Kalau Proses Dihentikan
++
++Saham yang berhenti di Risk severity ekstrem (fraud terbukti, delisting) tetap menghasilkan `AggregatorOutput` dengan `halted=true`, `module_outputs` kosong, dan `halt_reason` terisi. `risk_flags` tetap lengkap.
++
++Entri ini **tetap disimpan** ke Historical Tracking. Saham yang dihentikan justru penting untuk diaudit — kalau ternyata sistem sering menghentikan saham yang kemudian baik-baik saja, ambang severity ekstrem-nya yang salah.
++
+ ## Terhubung Dengan
+ 
+-Menerima input dari ketiga modul reasoning. Outputnya diteruskan ke Historical Tracking / Decision Journal.
++Menerima input dari ketiga modul reasoning (`ModuleOutput`), Confidence/Data Quality, Risk/Red-Flag Check. Outputnya diteruskan ke Historical Tracking / Decision Journal.
+ 
+ ---
+ 
+diff --git a/03_LAYER2_SPECS/12_HISTORICAL_TRACKING_JOURNAL.md b/03_LAYER2_SPECS/12_HISTORICAL_TRACKING_JOURNAL.md
+index 62368df..474d221 100644
+--- a/03_LAYER2_SPECS/12_HISTORICAL_TRACKING_JOURNAL.md
++++ b/03_LAYER2_SPECS/12_HISTORICAL_TRACKING_JOURNAL.md
+@@ -1,6 +1,7 @@
+ # Historical Tracking / Decision Journal
+ 
+-**Status:** Aktif
++**Status:** Aktif — revisi: pemisahan penyimpanan (v2.0) vs evaluasi (v2.1), pencatatan versi metodologi
++**Doc version:** 2.0.0
+ 
+ ## Definisi
+ 
+@@ -10,17 +11,44 @@ Mekanisme penyimpanan hasil analisa dari waktu ke waktu, untuk divalidasi terhad
+ 
+ Tanpa ini, tidak ada cara mengukur secara empiris apakah reasoning v2 benar-benar lebih akurat dari v1 — atau hanya terlihat lebih meyakinkan karena strukturnya lebih rapi.
+ 
++## Penyimpanan vs Evaluasi — Dipisah Sejak Revisi Ini
++
++Prinsip #6 mengizinkan komponen ini menyusul di v2.1. **Yang boleh ditunda cuma evaluasinya, bukan penyimpanannya.**
++
++| | Kapan | Kenapa |
++|---|---|---|
++| **Penyimpanan** snapshot | **v2.0 — sejak hari pertama** | Murah (tulis JSON per analisa). Kalau ditunda, saat v2.1 datang tidak ada apa-apa untuk dievaluasi |
++| **Evaluasi** terhadap kenyataan | v2.1 | Butuh waktu berlalu dulu supaya ada "kenyataan" untuk dibandingkan. Ini yang wajar ditunda |
++
++Ini koreksi terhadap cara pengecualian v2.1 dibaca sebelumnya. Menunda seluruh komponen berarti jam mulai berjalan baru saat v2.1 rilis — dan alat pembuktian satu-satunya yang dipunyai v2 baru menghasilkan data pertamanya berbulan-bulan setelah klaim "v2 lebih baik dari v1" dibuat. Menyimpan sejak awal membuat jam mulai berjalan hari ini, dengan biaya mendekati nol.
++
++Konsekuensi praktis: `HistoricalEntry.outcome` sengaja `null` saat entri dibuat. Field-nya sudah ada di v2.0, isinya menyusul di v2.1.
++
+ ## Sumber Data / Pendekatan
+ 
+-Menyimpan snapshot Output (hasil ketiga modul + confidence + flag) beserta tanggal analisa.
++Menyimpan snapshot `AggregatorOutput` utuh (hasil ketiga modul + confidence + flag) beserta tanggal analisa. **Snapshot utuh, bukan ringkasan** — ringkasan yang dibuat hari ini mengandaikan kita sudah tahu apa yang penting untuk dievaluasi nanti, dan itu justru yang belum diketahui.
++
++Bentuk lengkapnya dikunci di `01_ARCHITECTURE/04_DATA_CONTRACTS.md` §8 (`HistoricalEntry`).
++
++## Versi Metodologi (Prinsip #6)
++
++Tiap entri wajib mencatat `method_versions` — peta komponen → semver yang berlaku saat kesimpulan itu dibuat. Disalin ke level entri, bukan cuma tertanam di dalam snapshot, supaya audit bisa memfilter per versi tanpa membongkar isi tiap snapshot.
++
++Tanpa ini, audit di masa depan berisiko membandingkan kesimpulan lama dengan formula yang sudah berubah tanpa disadari — terutama untuk komponen derived/approximated (Business Cycle Stage, Money Flow, Market Sentiment, Market Breadth) yang logikanya memang diharapkan berubah seiring iterasi.
+ 
+ ## Cara Kerja
+ 
+-Simpan setiap hasil analisa sebagai entri historis. Secara periodik, bandingkan entri lama dengan pergerakan harga/kejadian aktual saham tersebut untuk mengevaluasi akurasi reasoning dari waktu ke waktu.
++1. **v2.0** — setiap `AggregatorOutput` yang keluar disimpan sebagai `HistoricalEntry`, termasuk yang `halted=true`. `outcome` dibiarkan `null`.
++2. **v2.1** — secara periodik, bandingkan entri lama dengan pergerakan harga/kejadian aktual saham tersebut, isi `outcome`, evaluasi akurasi reasoning per modul dan per versi metodologi.
++
++## Yang Masih Perlu Diputuskan
++
++- **Bentuk `outcome`.** Return absolut? Relatif terhadap index? Horizon berapa lama (dan berbeda per modul — Speculative jelas beda horizon dari Quality/Compound)? Ini pertanyaan v2.1, tapi bentuk penyimpanannya sebaiknya tidak menutup opsi.
++- **Media penyimpanan** — file JSON per entri, SQLite, atau lainnya. Terkait dengan pertanyaan cache di `04_DATA_SOURCES/05_RATE_LIMIT_CACHING_STRATEGY.md`.
+ 
+ ## Terhubung Dengan
+ 
+-Menerima input dari Aggregator & Output. Fase implementasi bisa menyusul setelah alur inti (Screening→Output) berjalan — dicatat sebagai kandidat v2.1 kalau perlu diprioritaskan belakangan.
++Menerima input dari Aggregator & Output.
+ 
+ ---
+ 
+diff --git a/04_DATA_SOURCES/01_PROVIDERS_OVERVIEW.md b/04_DATA_SOURCES/01_PROVIDERS_OVERVIEW.md
+index 6bc1172..d6fbeb4 100644
+--- a/04_DATA_SOURCES/01_PROVIDERS_OVERVIEW.md
++++ b/04_DATA_SOURCES/01_PROVIDERS_OVERVIEW.md
+@@ -1,6 +1,7 @@
+ # Providers Overview
+ 
+-**Status:** Aktif
++**Status:** Aktif — revisi: standar scraping dinyatakan eksplisit, universe breadth (D-05)
++**Doc version:** 2.0.0
+ 
+ ---
+ 
+@@ -16,20 +17,38 @@ Sesuai Prinsip #7 (`00_Foundation/02_PRINCIPLES.md`): **gratis dulu, berbayar be
+ - Yield Curve, VIX, DXY, Commodity Signals, Liquidity Conditions, Business Cycle Stage, Sector Rotation, Market Regime — semua lewat Yahoo Finance atau FRED.
+ 
+ **Derived / Approximated (dikonstruksi dari kombinasi data gratis, butuh effort ekstra):**
+-- Market Breadth — perlu daftar konstituen index + hitung manual dari harga tiap saham.
++- Market Breadth — dihitung atas **universe hasil Screening sendiri** (NASDAQ+NYSE dari listing files), bukan konstituen S&P 500. Daftar konstituen S&P 500 resmi berlisensi; yang gratis cuma scraping Wikipedia atau menebak dari holdings ETF. Lihat D-05 di `00_Foundation/04_DECISIONS.md` dan `02_LAYER1_SPECS/06_MARKET_BREADTH.md`.
+ - Macro Calendar (versi user-friendly) — versi resmi (FRED release calendar) gratis, versi "cantik" ala Investing.com berisiko scraping.
+ - Money Flow (level saham/sektor granular) — data resmi (EPFR dll) berbayar, memakai proxy volume+price action di sector ETF sebagai gantinya.
+ - Market Sentiment (Fear & Greed lengkap) — tidak ada API resmi gratis, dikonstruksi dari kombinasi AAII survey + put/call ratio + VIX + breadth.
+ 
++## 2b. Standar Scraping — Kenapa yfinance Boleh tapi Investing.com Tidak
++
++Ini perlu dinyatakan eksplisit karena dokumen-dokumen sebelumnya terlihat memakai dua standar berbeda tanpa alasan tertulis: `09_MACRO_CALENDAR.md` menolak scraping Investing.com/Forex Factory karena risiko ToS, tapi seluruh sistem berdiri di atas `yfinance` yang `02_YAHOO_FINANCE.md` sendiri akui berbasis scraping.
++
++Perbedaannya nyata, tapi bukan "yang satu scraping, yang satu tidak":
++
++| | `yfinance` | Investing.com / Forex Factory |
++|---|---|---|
++| Ada alternatif resmi gratis? | Tidak untuk cakupan ini | **Ya** — FRED release calendar |
++| Sifat data | Harga publik, di banyak sumber lain | Kalender, tersedia resmi dari sumber aslinya |
++| Yang di-scrape | Library pihak ketiga yang mapan | Halaman situs langsung |
++
++**Aturannya:** kalau ada sumber resmi gratis yang menyediakan data yang sama, pakai itu — scraping tidak boleh jadi jalan pintas untuk tampilan yang lebih enak. Kalau tidak ada alternatif resmi dan datanya publik, scraping lewat library mapan diterima sebagai risiko sadar.
++
++Konsekuensinya konsisten: **AAII Investor Sentiment** (dipakai Market Sentiment) tidak punya API resmi — praktisnya scraping juga. Ia lolos aturan di atas karena tidak ada alternatif resmi, tapi statusnya harus dicatat jujur di tabel, bukan disebut "gratis" begitu saja seolah setara dengan FRED.
++
++Risiko yang diterima: `yfinance` bisa rusak sewaktu-waktu tanpa pemberitahuan (`02_YAHOO_FINANCE.md`). Itu risiko tunggal terbesar di seluruh sistem — hampir semua data harga lewat sana. Belum ada rencana fallback; dicatat sebagai keputusan terbuka.
++
+ ## 3. Daftar Provider
+ 
+ | Provider | Dipakai Untuk | Status |
+ |---|---|---|
+-| Yahoo Finance | Harga, fundamental, VIX, DXY, commodity futures, sector ETF | Gratis, sudah dipakai di v1 |
++| Yahoo Finance | Harga, fundamental, VIX, DXY, commodity futures, sector ETF | Gratis, sudah dipakai di v1. **Bukan API resmi** (scraping) — titik kegagalan tunggal terbesar, lihat §2b |
+ | FRED | Yield curve, GDP, PMI, unemployment, M2, Fed balance sheet | Gratis, resmi |
+ | SEC EDGAR | Filing resmi, 13F institutional holdings, berita/8-K | Gratis, resmi, sudah ada provider-nya di v1 |
+-| NASDAQ Listing Files | Daftar ticker NASDAQ + NYSE | Gratis, publik |
+-| AAII Investor Sentiment | Survey sentimen mingguan | Gratis |
++| NASDAQ Listing Files | Daftar ticker NASDAQ + NYSE; juga universe untuk Market Breadth (D-05) | Gratis, publik |
++| AAII Investor Sentiment | Survey sentimen mingguan | Gratis, **tanpa API resmi** — praktisnya scraping, lihat §2b |
+ | CBOE Put/Call Ratio | Rasio put/call | Gratis, delayed |
+ | Finnhub | Berita perusahaan (`company-news`), SEC filings umum | Free tier **per endpoint** — `institutional-ownership` premium-only (403), tidak dipakai; endpoint lain wajib diverifikasi sebelum diandalkan |
+ 
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+new file mode 100644
+index 0000000..8555f30
+--- /dev/null
++++ b/CHANGELOG.md
+@@ -0,0 +1,41 @@
++# Changelog — AlphaForge v2 (Spec)
++
++Format: perubahan dicatat per revisi, mengacu ke entri `D-xx` di `00_Foundation/04_DECISIONS.md`.
++
++---
++
++## 2026-07-15 — Revisi Konsistensi Struktural
++
++Revisi ini menutup lima lubang struktural yang ditemukan saat review menyeluruh 37 dokumen. Tidak ada komponen baru yang ditambahkan (Prinsip #8: kedalaman di atas pelebaran) — yang bertambah cuma dua dokumen fondasi (`04_DECISIONS.md`, `04_DATA_CONTRACTS.md`) yang mengunci hal-hal yang sebelumnya menggantung.
++
++### Kontradiksi yang diperbaiki
++
++- **Risk/Red-Flag Check** menyebut sumbernya "Knowledge & Evidence", padahal `03_KNOWLEDGE.md` menyatakan Risk beroperasi di atas Knowledge saja. Akarnya: field yang dibutuhkan Risk (dilusi, auditor, restatement, litigasi) tidak punya rumah di Knowledge. → **Knowledge bagian 7 (Governance & Peristiwa Filing)** ditambahkan; sumber Risk dikoreksi jadi Knowledge saja. (**D-01**)
++- **Valuasi** dicontohkan sebagai fakta level Knowledge di tabel `03_KNOWLEDGE.md`, tapi tidak punya slot di skema 5 bagiannya — padahal Multibagger & Quality/Compound dua-duanya butuh. → **Knowledge bagian 6 (Valuasi)** ditambahkan. (**D-02**)
++- **Knowledge ↔ Peer melingkar.** Knowledge bagian 3 minta "pangsa revenue relatif terhadap total peer group", padahal Peer beroperasi di atas Knowledge. → field dikeluarkan dari Knowledge; angka relatif-peer sekarang hanya hidup di output Peer. (**D-03**)
++
++### Yang sebelumnya tidak pernah didefinisikan
++
++- **Kontrak data** (`01_ARCHITECTURE/04_DATA_CONTRACTS.md`, baru) — bentuk formal Market Context Package, Knowledge Profile, Peer Result, **Module Output**, Aggregator Output, Historical Entry. Sebelumnya cuma Knowledge yang punya skema; Aggregator ditugasi "menampilkan tiga hasil berdampingan" tanpa bentuk hasil itu pernah ditulis. (**D-04**)
++- **Aturan validasi V1–V5** — "flag wajib direspons" (Prinsip #4) dan "confidence eksplisit" (Prinsip #5) sekarang ditegakkan secara mekanis: output modul **ditolak** kalau `flag_responses` tidak lengkap atau `limiters` kosong saat confidence rendah. V2 menangkap rationale generik yang disalin antar flag — gejala yang sudah tercatat di log progres 14 Juli. (**D-04**)
++- **Tes independensi T1 & T2** — Prinsip #3 sudah mendefinisikan "independen" secara teknis tapi tidak pernah menyatakan cara mengeceknya.
++- **Pipeline dua fase + barrier** — diagram lama menggambar Layer 2 sebagai alur lurus per-ticker; kenyataannya Peer butuh populasi utuh, jadi ada barrier setelah Knowledge. Sekarang digambar eksplisit. (**D-03**)
++- **DAG Layer 1** — frasa "saling melengkapi" di bagian *Dipakai Oleh* ternyata menggambarkan kedekatan tema, bukan aliran data. Setelah ditelusuri: **11 dari 12 komponen adalah leaf** dan bisa paralel penuh; cuma `market_sentiment` yang punya dependensi nyata (VIX + Market Breadth). Layer 1 jauh lebih murah dari yang tersirat sebelumnya.
++- **Konvensi versi** — `Doc version`, `Method version`, `Kind` di header tiap spec. Prinsip #6 mensyaratkan versi metodologi dicatat di tiap entri historis, tapi spec sendiri belum berversi.
++- **Decision log** (`00_Foundation/04_DECISIONS.md`, baru) — keputusan + alternatif yang ditolak + biaya kalau dibalik.
++
++### Asumsi yang dikoreksi
++
++- **Market Breadth** — daftar konstituen S&P 500 diperlakukan seolah tinggal disuplai. Kenyataannya daftar resmi itu berlisensi S&P DJI; tidak ada sumber gratis-resmi. → breadth dihitung atas **universe hasil Screening sendiri**, yang gratis, sudah ada, dan lebih konsisten dengan cakupan market-wide v2. Konsekuensinya (angka tidak sebanding dengan breadth publik) dinyatakan eksplisit. (**D-05**)
++- **Historical Tracking** — pengecualian v2.1 sebelumnya terbaca sebagai "seluruh komponen ditunda". → dipisah: **penyimpanan** snapshot jalan sejak v2.0 (murah), **evaluasi** yang menyusul ke v2.1. Kalau penyimpanan ikut ditunda, saat v2.1 datang tidak ada data untuk dievaluasi.
++- **Standar scraping** — `09_MACRO_CALENDAR.md` menolak scraping Investing.com sementara seluruh sistem berdiri di atas `yfinance` yang juga scraping. Aturannya sekarang tertulis: kalau ada sumber resmi gratis yang setara, pakai itu; kalau tidak ada, scraping lewat library mapan diterima sebagai risiko sadar. AAII dicatat jujur statusnya.
++- **README** — masih menyatakan "implementasi kode belum dimulai", padahal log progres hari yang sama mencatat kode sudah end-to-end + 18 test + validasi live.
++
++### Yang sengaja TIDAK diubah
++
++- Kriteria & bobot tiga modul reasoning. Wadahnya dikunci, isinya tetap keputusan terbuka — ini yang paling menentukan identitas v2 dan tidak pantas diputuskan sambil lalu.
++- Ambang kuantitatif red flag, format output Confidence, TTL cache, budget waktu/call satu sesi penuh. Semua tercatat di bagian "Keputusan Terbuka" di `04_DECISIONS.md`.
++
++---
++
++© AlphaForge v2
+diff --git a/README.md b/README.md
+index f3a082c..84aab59 100644
+--- a/README.md
++++ b/README.md
+@@ -3,15 +3,15 @@
+ Pembangunan ulang inti reasoning AlphaForge dari nol.
+ 
+ - **Layer 1 — Market Context Engine**: membaca kondisi makro & market secara keseluruhan (12 komponen) sebelum saham manapun dianalisa.
+-- **Layer 2 — Stock Analysis Engine**: Screening (market-wide) → Evidence → Knowledge → Risk/Red-Flag Check → tiga modul reasoning independen (Multibagger, Quality/Compound, Speculative) → Aggregator (tampilkan ketiganya, bukan satu verdict) → Historical Tracking.
++- **Layer 2 — Stock Analysis Engine**: Screening (market-wide) → Evidence → Knowledge → Peer → Confidence → Risk/Red-Flag Check → tiga modul reasoning independen (Multibagger, Quality/Compound, Speculative) → Aggregator (tampilkan ketiganya, bukan satu verdict) → Historical Tracking.
+ 
+ v1 (`alphaforge-v1` / `alphaforge-core-v1`) tetap hidup sebagai referensi — tidak dihapus, tidak digabung.
+ 
+ ## Struktur Dokumen
+ 
+ ```
+-00_Foundation/       — Charter, Principles, Glossary
+-01_ARCHITECTURE/     — System Overview, spesifikasi arsitektur Layer 1 & 2
++00_Foundation/       — Charter, Principles, Glossary, Decision Log
++01_ARCHITECTURE/     — System Overview, spesifikasi Layer 1 & 2, Kontrak Data
+ 02_LAYER1_SPECS/     — 12 spec komponen Market Context Engine
+ 03_LAYER2_SPECS/     — 12 spec komponen Stock Analysis Engine
+ 04_DATA_SOURCES/     — Provider data, strategi rate-limit & caching
+@@ -19,13 +19,26 @@ v1 (`alphaforge-v1` / `alphaforge-core-v1`) tetap hidup sebagai referensi — ti
+ 
+ ## Status
+ 
+-Struktur & spec konten dasar sudah lengkap (35 dokumen spec). Implementasi kode belum dimulai — akan menyusul di repo terpisah, mengikuti pola v1 (`alphaforge` untuk dokumentasi, `alphaforge-core` untuk kode).
++**Spec:** 37 dokumen. Fondasi, arsitektur, dan Layer 1 lengkap. Di Layer 2, wadahnya sudah dikunci (kontrak data, aturan validasi) — **isi kriteria & bobot tiga modul reasoning belum**, dan itu keputusan terbuka terbesar yang tersisa.
++
++**Kode:** ada di repo terpisah `alphaforge-core-v2`, mengikuti pola v1 (`alphaforge` untuk dokumentasi, `alphaforge-core` untuk kode). Implementasi awal Layer 1 (12/12) dan Layer 2 end-to-end sudah jalan dan tervalidasi dengan data live. Beberapa hal diketahui belum lengkap — lihat `PROGRESS_2026-07-14.md`.
++
++> **Catatan:** revisi spec terbaru (lihat `CHANGELOG.md`) mengubah beberapa hal yang **kode-nya belum ikut menyesuaikan** — terutama kontrak output tiga modul (D-04), bagian 6 & 7 skema Knowledge (D-01, D-02), barrier Fase A/B (D-03), dan universe Market Breadth (D-05). Spec sekarang mendahului kode di titik-titik ini, bukan sebaliknya.
+ 
+ ## Mulai Baca Dari Mana
+ 
+ 1. `00_Foundation/01_CHARTER.md` — kenapa v2 dibuat, apa bedanya dari v1
+-2. `01_ARCHITECTURE/01_SYSTEM_OVERVIEW.md` — gambaran alur end-to-end
+-3. Lanjut ke spec detail sesuai layer yang ingin didalami
++2. `00_Foundation/04_DECISIONS.md` — keputusan arsitektur yang sudah diambil + alternatif yang ditolak
++3. `01_ARCHITECTURE/01_SYSTEM_OVERVIEW.md` — gambaran alur end-to-end
++4. `01_ARCHITECTURE/04_DATA_CONTRACTS.md` — bentuk tiap paket data yang mengalir
++5. Lanjut ke spec detail sesuai layer yang ingin didalami
++
++## Konvensi Dokumen
++
++- **`Doc version`** (semver) di header tiap spec — versi dokumennya.
++- **`Method version`** (semver) — versi *formula*-nya, wajib untuk komponen derived/approximated. Ini yang dicatat di tiap entri Historical Tracking (Prinsip #6). Perubahan formula yang mengubah hasil wajib menaikkannya.
++- **`Kind`** — `direct` (satu angka dari satu sumber otoritatif) vs `derived` (dikonstruksi dari kombinasi sumber). Ikut mengalir ke Layer 2 lewat `ComponentReading.kind` supaya Prinsip #5 tidak berhenti sebagai kalimat di dokumen.
++- Keputusan desain dicatat di `00_Foundation/04_DECISIONS.md` sebagai `D-xx`, lengkap dengan alternatif yang ditolak dan biaya kalau dibalik. Entri tidak dihapus — kalau dibatalkan, statusnya diubah.
+ 
+ ---
+ 
+-- 
+2.43.0
+

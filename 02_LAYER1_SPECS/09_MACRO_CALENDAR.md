@@ -1,6 +1,8 @@
 # Macro Economic Calendar
 
-**Status:** Aktif
+**Status:** Aktif — revisi: kind ditambahkan (Prinsip #5)
+**Doc version:** 1.1.0
+**Kind:** direct
 
 ## Definisi
 
@@ -18,7 +20,11 @@ FRED release calendar (gratis, resmi). Versi 'user-friendly' seperti di Investin
 
 Tarik jadwal rilis data utama dari FRED, tandai tanggal-tanggal dengan potensi dampak tinggi.
 
-## Dipakai Oleh
+## Input Dari
+
+Tidak ada — ditarik langsung dari FRED release calendar. Komponen leaf.
+
+## Digunakan Oleh
 
 Semua modul Layer 2, sebagai penanda 'apakah saat ini mendekati periode volatil'.
 

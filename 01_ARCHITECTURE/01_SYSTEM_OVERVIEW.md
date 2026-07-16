@@ -1,6 +1,7 @@
 # Gambaran Sistem (System Overview)
 
-**Status:** Aktif
+**Status:** Aktif — revisi: barrier Fase A/B, rujukan kontrak data
+**Doc version:** 2.0.0
 
 ---
 
@@ -18,13 +19,15 @@
                                 ▼  (Market Context Package)
                     LAYER 2 — STOCK ANALYSIS ENGINE
     ┌───────────────────────────────────────────────────────────┐
+    │  FASE A — per-ticker, paralel                                │
     │  Screening (NASDAQ + NYSE, market-wide)                      │
     │           ↓                                                 │
     │  Evidence (fakta terverifikasi per ticker)                   │
     │           ↓                                                 │
-    │  Knowledge (dibangun DARI evidence)                          │
-    │           ↓                                                 │
-    │  Confidence/Data Quality · Peer/Relative Comparison           │
+    │  Knowledge (dibangun DARI evidence, murni per-ticker)         │
+    │  ═══════════════ BARRIER ═══════════════                     │
+    │  FASE B — butuh populasi                                     │
+    │  Peer/Relative Comparison · Confidence/Data Quality           │
     │           ↓                                                 │
     │  Risk / Red-Flag Check (gerbang)                              │
     │           ↓                                                 │
@@ -45,7 +48,8 @@
 
 ## 2. Prinsip Desain Utama
 
-- **Satu arah aliran data.** Setiap tahap hanya menerima output dari tahap sebelumnya lewat "paket" yang jelas bentuknya — tidak ada tahap yang memanggil balik ke belakang.
+- **Satu arah aliran data.** Setiap tahap hanya menerima output dari tahap sebelumnya lewat "paket" yang jelas bentuknya — tidak ada tahap yang memanggil balik ke belakang. Bentuk tiap paket dikunci di `04_DATA_CONTRACTS.md`; sebelum dokumen itu ada, klaim ini tidak bisa dicek.
+- **Dua fase, bukan satu alur lurus.** Fase A (Evidence→Knowledge) jalan per-ticker paralel; Fase B (Peer→…→Aggregator) butuh populasi utuh. Barrier di antaranya nyata dan tidak bisa dihindari — lihat `03_LAYER2_STOCK_ANALYSIS.md` §2.4.
 - **Layer 1 dihitung sekali, dipakai berkali-kali.** Market Context Package tidak dihitung ulang per saham; ia dihitung untuk kondisi market saat itu dan dipakai sebagai input bersama untuk semua saham yang diproses di sesi yang sama.
 - **Tiga modul reasoning berjalan independen.** Mereka menerima Knowledge dan Market Context yang sama, tapi masing-masing punya logika reasoning sendiri dan tidak saling mempengaruhi satu sama lain.
 - **Aggregator tidak menyimpulkan.** Tugasnya menyusun tampilan, bukan memutuskan mana dari tiga pandangan yang "benar".
@@ -68,6 +72,8 @@
 - Detail Layer 1 → `02_LAYER1_MARKET_CONTEXT.md`
 - Detail Layer 2 → `03_LAYER2_STOCK_ANALYSIS.md`
 - Spec tiap komponen → folder `02_LAYER1_SPECS/` dan `03_LAYER2_SPECS/`
+- Bentuk tiap paket data → `04_DATA_CONTRACTS.md`
+- Keputusan arsitektur & alternatif yang ditolak → `00_Foundation/04_DECISIONS.md`
 
 ---
 

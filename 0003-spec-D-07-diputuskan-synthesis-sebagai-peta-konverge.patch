@@ -1,0 +1,366 @@
+From aff93afbee667ec8dc090233b28e38dc5117f4c3 Mon Sep 17 00:00:00 2001
+From: AlphaForge <a@b>
+Date: Thu, 16 Jul 2026 11:09:42 +0000
+Subject: [PATCH 3/6] =?UTF-8?q?spec:=20D-07=20diputuskan=20=E2=80=94=20syn?=
+ =?UTF-8?q?thesis=20sebagai=20peta=20konvergensi?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Bukan (a) tiga kolom telanjang, bukan (b) verdict gabungan. Keduanya salah:
+- (b) melanggar Prinsip #3; di dashboard justru lebih buruk (tak tersimpan, tak bisa dievaluasi)
+- (a) memindahkan beban sintesis ke pembaca tiap kali tanpa alat — praktis tak transparan
+
+(c) synthesis: memetakan di mana 3 modul sepakat/berbeda dan KENAPA (root_cause).
+Aturan S1-S6: posisi di bawah 3 kolom, wajib sitasi, confidence = terendah dari 3
+(bukan rata-rata), kosakata verdict dilarang, konvergensi penuh picu tes T2.
+Uji pembeda: kalau bisa dibaca sendirian dan terasa cukup -> sudah jadi verdict.
+
+Kontrak data -> 1.2.0 (AggregatorOutput.synthesis)
+---
+ 00_Foundation/03_GLOSSARY.md            |  5 +-
+ 00_Foundation/04_DECISIONS.md           | 72 +++++++++++++++++++------
+ 01_ARCHITECTURE/04_DATA_CONTRACTS.md    | 34 +++++++++++-
+ 01_ARCHITECTURE/05_DASHBOARD_LOCAL.md   | 28 ++++++----
+ 03_LAYER2_SPECS/11_AGGREGATOR_OUTPUT.md | 24 ++++++++-
+ CHANGELOG.md                            | 13 +++--
+ 6 files changed, 144 insertions(+), 32 deletions(-)
+
+diff --git a/00_Foundation/03_GLOSSARY.md b/00_Foundation/03_GLOSSARY.md
+index 5af709c..2311112 100644
+--- a/00_Foundation/03_GLOSSARY.md
++++ b/00_Foundation/03_GLOSSARY.md
+@@ -1,7 +1,7 @@
+ # AlphaForge v2 — Glosarium
+ 
+ **Status:** Aktif — revisi: istilah dari kontrak data & keputusan D-01..D-05 ditambahkan
+-**Doc version:** 1.3.0
++**Doc version:** 1.4.0
+ 
+ Istilah-istilah kunci yang dipakai konsisten di seluruh dokumen AlphaForge v2. Disusun per kelompok: konsep fondasi, istilah Layer 1, istilah Layer 2.
+ 
+@@ -132,6 +132,9 @@ Lapisan tampilan untuk hasil kedua layer. Berjalan lokal tanpa server, membaca a
+ **Context Summary**
+ Kesimpulan kondisi market dari 12 komponen Layer 1 (Section 2 halaman Layer 1). **Dihasilkan Layer 1, bukan dashboard** — meringkas 12 pembacaan adalah sintesis, dan sintesis adalah reasoning: ia butuh `method_version`, confidence, dan jejak audit. Dilarang punya skor tunggal. Lihat D-06.
+ 
++**Synthesis (Peta Konvergensi)**
++Bagian yang memetakan di mana ketiga modul reasoning sepakat, di mana berbeda, dan **kenapa** berbeda (`root_cause`). Bukan verdict: verdict memampatkan tiga dimensi jadi satu lalu membuang sisanya; `synthesis` menunjuk balik ke tiga hasil dan tidak menggantikannya — daftar isi, bukan pengganti isi. Confidence-nya = terendah dari tiga modul, bukan rata-rata. Ditampilkan di bawah tiga kolom, tidak di atas. Uji pembedanya: kalau bisa dibaca sendirian dan terasa cukup, ia sudah jadi verdict. Lihat D-07.
++
+ **Narasi (Narrative)**
+ Penjelasan arti sebuah pembacaan, dalam bahasa manusia. **Artefak pipeline, bukan hasil render** — narasi yang disusun saat halaman dibuka tidak berversi, tidak tersimpan, dan bisa berbeda tiap kali dibuka untuk data yang sama.
+ 
+diff --git a/00_Foundation/04_DECISIONS.md b/00_Foundation/04_DECISIONS.md
+index edc1b1b..44a15dc 100644
+--- a/00_Foundation/04_DECISIONS.md
++++ b/00_Foundation/04_DECISIONS.md
+@@ -190,28 +190,71 @@ Rendah untuk dashboard-nya (hapus satu dokumen, ia tidak dibaca komponen lain).
+ 
+ ---
+ 
+-## D-07 — "Menampilkan kesimpulan" di Section 2 Layer 2: BELUM DIPUTUSKAN
++## D-07 — Section 2 Layer 2 menampilkan **peta konvergensi**, bukan verdict dan bukan tiga kolom telanjang
+ 
+-**Status:** ⚠ Terbuka — perlu diputuskan sebelum dashboard diimplementasikan
+-**Menyentuh:** `01_ARCHITECTURE/05_DASHBOARD_LOCAL.md` §4
++**Status:** Aktif
++**Menyentuh:** `01_ARCHITECTURE/05_DASHBOARD_LOCAL.md` §4, `01_ARCHITECTURE/04_DATA_CONTRACTS.md` §7
+ 
+ ### Masalah
+-Deskripsi Section 2 berbunyi *"hasil analisa dari reasoning dan menampilkan kesimpulan"*. Frasa itu punya dua pembacaan yang berlawanan arah:
++Deskripsi Section 2 berbunyi *"hasil analisa dari reasoning dan menampilkan kesimpulan"*. Awalnya ini dibaca sebagai pilihan antara dua opsi:
++
++**(a)** Tiga `stance` berdampingan, pembaca menyimpulkan sendiri.
++**(b)** Satu kesimpulan gabungan.
++
++Keduanya ditolak. Yang menarik: **keduanya salah karena alasan yang berlawanan** — dan itu justru yang menunjukkan apa yang sebenarnya kurang.
++
++### Kenapa (b) ditolak
++Verdict gabungan melanggar Prinsip #3 dan D-04. Menaruhnya di dashboard tidak meringankan — justru memperberat: ia tetap single-verdict, tapi tanpa spec, tanpa confidence, tanpa `flag_responses`, dan tidak tersimpan ke Historical Tracking. Artinya tidak pernah bisa dievaluasi benar-salahnya. Itu melanggar Prinsip #3 di tempat yang paling sulit dideteksi nanti.
++
++### Kenapa (a) juga ditolak
++Ini bagian yang tidak terlihat di ronde sebelumnya.
++
++Keluhan pemicu seluruh rombakan ini adalah **transparansi**. Tapi tiga kolom berdampingan tanpa apa-apa lagi bukan transparan — ia cuma **memindahkan beban sintesis ke pembaca, setiap kali, tanpa alat**. Pembaca yang melihat Multibagger bilang `weak` dan Quality/Compound bilang `compelling` tetap harus menebak sendiri kenapa keduanya berbeda: apakah karena membaca field yang berbeda? Karena bobot yang berbeda atas field yang sama? Karena salah satu kena `knowledge_gaps`?
++
++Informasi itu **ada** di `ModuleOutput` — tersebar di `stance_rationale`, `context_used`, `knowledge_gaps`, `flag_responses` milik tiga modul. Tapi tersebar. Dan sesuatu yang harus dirakit ulang manual setiap kali secara praktis sama dengan tidak transparan.
++
++Itulah kenapa permintaan "kesimpulan" muncul. Bukan karena ingin verdict — tapi karena tiga kolom saja memang belum selesai.
++
++### Keputusan
++**(c) — `synthesis`: peta konvergensi & divergensi.** Bukan menjawab *"jadi ini bagus atau nggak?"*, tapi menjawab *"ketiganya sepakat di mana, berbeda di mana, dan kenapa berbeda."*
++
++Contoh bentuknya:
++
++> Ketiga modul sepakat fundamental kuat (margin 42%, FCF positif 8 kuartal berturut). Perbedaannya di valuasi: Quality/Compound menilai P/E 34 wajar untuk margin sebesar itu; Multibagger menilai P/E 34 memangkas ruang naik sehingga stance-nya turun ke `weak`; Speculative menganggap valuasi tidak relevan tanpa katalis, dan tidak ada katalis dalam 90 hari. Tidak ada modul yang terhalang `knowledge_gaps`.
+ 
+-**(a) Kesimpulan masing-masing modul** — tiga `stance` + `stance_rationale` berdampingan. Konsisten dengan Prinsip #3 dan D-04.
++Perhatikan yang **tidak** ada di situ: tidak ada peringkat, tidak ada skor, tidak ada "sebaiknya". Yang ada: sumber perbedaannya bisa ditunjuk. Pembaca tetap yang memutuskan — tapi sekarang ia memutuskan sambil tahu di mana persisnya ketiga lensa berpisah.
+ 
+-**(b) Satu kesimpulan gabungan** dari tiga modul. Dilarang D-04 dan `01_SYSTEM_OVERVIEW.md` §3.
++### Kenapa ini menambah informasi, bukan mengurangi
++Ini pembeda pokok dari (b), dan pantas dinyatakan tegas karena gampang kabur:
+ 
+-### Kenapa ini bukan sekadar soal kata
+-Kalau yang dimaksud (b), menaruhnya di dashboard tidak membuatnya lebih ringan — justru lebih berat. Verdict gabungan yang lahir di lapisan tampilan tetap single-verdict, tapi tanpa spec, tanpa confidence, tanpa `flag_responses`, dan tidak tersimpan ke Historical Tracking. Artinya ia tidak pernah bisa dievaluasi benar atau salahnya.
++- **Verdict/skor memampatkan** tiga dimensi jadi satu, lalu membuang sisanya. Informasi hilang.
++- **`synthesis` memetakan** — ia menunjuk balik ke tiga kolom, tidak menggantikannya. Ia daftar isi, bukan pengganti isi.
+ 
+-Itu bukan cuma melanggar Prinsip #3 — itu melanggarnya di tempat yang paling sulit dideteksi nanti. Dan tekanannya nyata: satu kesimpulan selalu lebih enak dibaca daripada tiga yang harus ditimbang sendiri. Persis itu yang bikin v1 gagal, dan persis itu alasan v2 ada.
++Uji pembeda: kalau `synthesis` bisa dibaca **tanpa** tiga kolom dan tetap terasa cukup, ia sudah jadi verdict dan sudah gagal. `synthesis` yang benar justru **tidak berguna** tanpa tiga kolom di atasnya — ia menunjuk ke sana.
+ 
+-### Sementara ini
+-Dashboard mengikuti pembacaan **(a)**.
++### Aturan yang mengikat
+ 
+-### Kalau ternyata (b) yang dimaksud
+-Jangan dikerjakan diam-diam di dashboard. Buka entri baru yang membatalkan D-04 secara eksplisit, dan taruh verdict-nya di `AggregatorOutput` supaya setidaknya ia berversi, ber-confidence, dan bisa diaudit. Verdict yang dicatat masih bisa dievaluasi dan dicabut; verdict yang cuma hidup di layar tidak.
++| # | Aturan | Kenapa |
++|---|---|---|
++| S1 | **Ditampilkan DI BAWAH tiga kolom, tidak di atas.** Bukan preferensi tata letak — mengikat. | Di atas = verdict yang dibaca duluan, tiga kolom jadi lampiran. Di bawah = rangkuman setelah pembaca melihat sendiri. Posisi menentukan fungsi |
++| S2 | **Wajib sitasi.** Tiap klaim menunjuk modul + field spesifik. Yang tidak bisa disitasi, tidak boleh ditulis | Mencegah `synthesis` menyelundupkan penilaian yang tidak dimiliki modul manapun |
++| S3 | **Kosakata terlarang:** buy/sell/hold, rekomendasi, skor apa pun, peringkat, "secara keseluruhan", "overall" | Kata-kata ini pintu masuk verdict. Dilarang di level teks, bukan cuma niat |
++| S4 | **Confidence `synthesis` = confidence TERENDAH dari tiga modul.** Bukan rata-rata, bukan dihitung sendiri | Rangkuman tidak boleh lebih yakin dari input terlemahnya. Rata-rata akan menyembunyikan satu modul yang buta |
++| S5 | **Kalau ketiga stance sama**, `synthesis` wajib menyatakannya eksplisit dan memicu tanda T2 | Konvergensi penuh adalah sinyal Multi-Lens mungkin cuma klaim di atas kertas (D-04, tes T2). Justru saat paling nyaman itulah paling perlu dicurigai |
++| S6 | Dihasilkan **pipeline**, masuk `AggregatorOutput`, tersimpan ke Historical Tracking, punya `method_version` | Sama seperti D-06. Reasoning yang lahir di lapisan tampilan tidak bisa diaudit |
++
++### Alternatif yang ditolak
++- **(a) tiga kolom telanjang** — konsisten secara prinsip, tapi menyerahkan perakitan ke pembaca setiap kali. Konsistensi yang dibayar dengan komponen yang tidak terpakai bukan konsistensi, itu penghindaran.
++- **(b) verdict gabungan** — alasannya di atas.
++- **Skor kesepakatan** ("3/3 modul positif") — terdengar seperti peta, sebenarnya skor. Memampatkan lagi, dan lebih licik karena menyamar sebagai statistik.
++
++### Risiko yang diterima secara sadar
++`synthesis` **tetap akan jadi yang paling sering dibaca**. Itu tidak bisa dihilangkan — teks naratif selalu menang melawan tabel. S1 (posisi di bawah) dan S2 (wajib sitasi) menekan risikonya, tidak menghapusnya.
++
++**Yang harus diawasi setelah dipakai beberapa minggu:** kalau `synthesis` mulai bisa dibaca berdiri sendiri tanpa tiga kolom terasa hilang — itu tandanya ia sudah pelan-pelan berubah jadi verdict, dan D-07 perlu diperketat atau dicabut. Ini gejala yang kelihatan dari kebiasaan membaca sendiri, bukan dari kode.
++
++### Biaya kalau dibalik
++Rendah. Hapus field `synthesis` dari `AggregatorOutput` dan section-nya dari dashboard — tiga kolom tetap berdiri sendiri, kembali ke (a).
+ 
+ ---
+ 
+@@ -224,8 +267,7 @@ Dicatat di sini supaya tidak keliru dianggap sudah beres:
+ - **Ambang kuantitatif red flag** — persentase dilusi, nilai insider selling, jangka waktu.
+ - **TTL cache per jenis data** dan ukuran batch aman untuk `yfinance`.
+ - **Budget waktu/call satu sesi penuh** — belum pernah dihitung. Lihat `04_DATA_SOURCES/05_RATE_LIMIT_CACHING_STRATEGY.md`.
+-- **Spec `context_summary`** — kriteria, ambang, apa yang membuatnya degraded (D-06).
+-- **Arti "menampilkan kesimpulan"** di Section 2 Layer 2 (**D-07**) — paling mendesak dari daftar ini.
++- **Spec `context_summary`** — kriteria & ambang. Bentuknya mengikuti pola D-07: memetakan di mana 12 komponen searah dan di mana bertentangan, bukan skor market.
+ - **Siapa penulis narasi** — kalau LLM, `method_version`-nya wajib mencakup versi model + prompt.
+ 
+ ---
+diff --git a/01_ARCHITECTURE/04_DATA_CONTRACTS.md b/01_ARCHITECTURE/04_DATA_CONTRACTS.md
+index e28a11e..725feec 100644
+--- a/01_ARCHITECTURE/04_DATA_CONTRACTS.md
++++ b/01_ARCHITECTURE/04_DATA_CONTRACTS.md
+@@ -1,7 +1,7 @@
+ # Kontrak Data (Data Contracts)
+ 
+ **Status:** Aktif
+-**Doc version:** 1.1.0
++**Doc version:** 1.2.0
+ 
+ ---
+ 
+@@ -199,6 +199,7 @@ AggregatorOutput {
+   knowledge_ref         : {ticker, evidence_snapshot_date}
+ 
+   module_outputs        : [ModuleOutput]             # selalu 3, urutan lihat di bawah
++  synthesis             : Synthesis                  # D-07
+   risk_flags            : [Flag]                     # eksplisit, bukan disembunyikan
+   confidence_overall    : {score, band, limiters}
+ 
+@@ -210,6 +211,35 @@ AggregatorOutput {
+ }
+ ```
+ 
++### `Synthesis` — Peta Konvergensi (D-07)
++
++```
++Synthesis {
++  method_version        : semver
++  agreements            : [{claim, modules[], citations[]}]   # di mana ketiganya searah
++  divergences           : [{
++                            claim      : string,
++                            modules    : [{module, position}],
++                            root_cause : enum{different_fields, different_weights,
++                                              knowledge_gap, flag_response, context_reading},
++                            citations  : [string]
++                          }]
++  narrative             : string                    # rangkuman naratif, tunduk S2 & S3
++  confidence            : {score, band, limiters}   # = TERENDAH dari 3 modul (S4)
++  full_convergence      : bool                      # true kalau 3 stance sama → picu T2 (S5)
++}
++```
++
++`root_cause` adalah inti gunanya. "Multibagger dan Quality/Compound berbeda" itu belum informasi — yang informasi adalah **kenapa**: apakah mereka membaca field yang berbeda, membobot field yang sama secara berbeda, salah satu terhalang `knowledge_gap`, atau berbeda dalam merespons flag yang sama.
++
++`citations[]` wajib menunjuk ke field spesifik (`knowledge.valuation.pe_trailing`, `module.multibagger.knowledge_gaps[0]`). **Klaim yang tidak bisa disitasi tidak boleh ditulis** (S2). Ini yang mencegah `synthesis` menyelundupkan penilaian yang tidak dimiliki modul manapun.
++
++`confidence` **disalin dari modul dengan confidence terendah**, tidak dihitung sendiri dan tidak dirata-rata (S4). Rangkuman tidak boleh lebih yakin dari input terlemahnya; rata-rata akan menyembunyikan satu modul yang buta di balik dua yang percaya diri.
++
++`Synthesis` **dilarang** punya `verdict`, `score`, `rank`, `recommendation`, atau skor kesepakatan ("3/3 modul positif"). Yang terakhir itu terdengar seperti peta tapi sebenarnya skor — memampatkan tiga dimensi jadi satu, cuma menyamar sebagai statistik.
++
++**Uji pembeda:** kalau `synthesis` bisa dibaca tanpa `module_outputs` dan tetap terasa cukup, ia sudah jadi verdict dan sudah gagal. `Synthesis` yang benar tidak berguna tanpa tiga kolom di atasnya — ia menunjuk ke sana.
++
+ ### Urutan Tampilan
+ 
+ `module_outputs` **selalu** berurutan tetap: `multibagger`, `quality_compound`, `speculative`.
+@@ -218,7 +248,7 @@ Urutan tetap dipilih secara sadar, bukan default. Alternatifnya — mengurutkan
+ 
+ Urutan tetap tetap punya bias anchoring (yang pertama dibaca lebih dulu), tapi biasnya **konstan** — sama untuk semua saham, jadi tidak bisa disalahartikan sebagai sinyal tentang saham ini. Bias yang konstan bisa dikenali dan dikompensasi pembaca; bias yang berubah-ubah per saham tidak.
+ 
+-**Aggregator tidak boleh punya field `verdict`, `score`, `rank`, atau `recommendation`.** Bukan karena belum sempat — karena itu tugas yang sengaja tidak diberikan (`01_SYSTEM_OVERVIEW.md` §3).
++**Aggregator tidak boleh punya field `verdict`, `score`, `rank`, atau `recommendation`.** (`synthesis` bukan pengecualian — ia memetakan, tidak memampatkan; lihat D-07 dan uji pembeda di atas.) Bukan karena belum sempat — karena itu tugas yang sengaja tidak diberikan (`01_SYSTEM_OVERVIEW.md` §3).
+ 
+ ### Kalau `halted = true`
+ 
+diff --git a/01_ARCHITECTURE/05_DASHBOARD_LOCAL.md b/01_ARCHITECTURE/05_DASHBOARD_LOCAL.md
+index 633638c..3e898d4 100644
+--- a/01_ARCHITECTURE/05_DASHBOARD_LOCAL.md
++++ b/01_ARCHITECTURE/05_DASHBOARD_LOCAL.md
+@@ -1,7 +1,7 @@
+ # Dashboard Lokal
+ 
+ **Status:** Aktif
+-**Doc version:** 1.0.0
++**Doc version:** 1.1.0
+ 
+ ---
+ 
+@@ -146,19 +146,27 @@ Tiap modul menampilkan seluruh isi `ModuleOutput`-nya:
+ 
+ Kalau `halted=true`: tampilkan `halt_reason` dan `risk_flags`, ketiga kolom modul kosong. Jangan sembunyikan halamannya — saham yang dihentikan justru perlu terlihat.
+ 
+-### ⚠ "Menampilkan Kesimpulan" — Belum Diputuskan
++### Kesimpulan: Peta Konvergensi (D-07)
+ 
+-Deskripsi section 2 menyebut *"hasil analisa dari reasoning **dan menampilkan kesimpulan**"*. Frasa itu punya dua pembacaan yang **berlawanan arah**:
++Di **bawah** ketiga kolom — bukan di atas — tampil `synthesis`: peta di mana ketiga modul sepakat, di mana berbeda, dan **kenapa** berbeda.
+ 
+-**(a) Kesimpulan masing-masing modul** — tiga `stance` + `stance_rationale` ditampilkan berdampingan. Ini sudah tercakup di tabel atas. Konsisten dengan Prinsip #3.
++Posisinya mengikat, bukan preferensi tata letak. Di atas, ia jadi verdict yang dibaca duluan dan tiga kolom berubah jadi lampiran. Di bawah, ia rangkuman setelah pembaca melihat sendiri. Posisi menentukan fungsi.
+ 
+-**(b) Satu kesimpulan gabungan** dari tiga modul. **Ini dilarang** oleh D-04 dan `01_SYSTEM_OVERVIEW.md` §3 — `AggregatorOutput` tidak boleh punya `verdict`, `score`, `rank`, atau `recommendation`. Dan menaruhnya di dashboard tidak mengubah apa pun: satu kesimpulan gabungan yang lahir di lapisan tampilan tetap single-verdict, cuma tanpa spec, tanpa confidence, tanpa tercatat di Historical Tracking. Justru versi yang lebih buruk.
++| Elemen | Isi |
++|---|---|
++| `agreements[]` | Klaim yang ketiganya searah, + modul mana + sitasi |
++| `divergences[]` | Klaim yang berbeda, + posisi tiap modul, + **`root_cause`**, + sitasi |
++| `narrative` | Rangkuman naratif |
++| `confidence` | **Sama dengan confidence terendah dari tiga modul** — tampilkan modul mana sumbernya |
++| `full_convergence` | Kalau `true`, tampilkan penanda: ketiga lensa sepakat penuh → patut dicurigai (tes T2) |
+ 
+-Perlu diputuskan sebelum implementasi. Lihat **D-07**.
++**`root_cause` adalah inti gunanya.** "Multibagger dan Quality/Compound berbeda" belum informasi. Yang informasi: *kenapa* — beda field yang dibaca, beda bobot atas field yang sama, salah satu terhalang `knowledge_gap`, atau beda cara merespons flag yang sama.
+ 
+-Selama belum diputuskan, dashboard mengikuti pembacaan **(a)**.
++Tiap sitasi bisa diklik ke field asalnya di Section 1 atau ke kolom modul di atasnya. Ini yang menutup rantai transparansi sepenuhnya: kesimpulan → sumber perbedaan → field → sumber data → waktu tarik.
+ 
+----
++**Yang dilarang tampil di sini:** buy/sell/hold, rekomendasi, skor apa pun, peringkat, "secara keseluruhan", dan skor kesepakatan ("3/3 modul positif" — itu skor yang menyamar jadi peta).
++
++> **Uji pembeda, dipakai saat review tampilan:** kalau bagian ini bisa dibaca tanpa tiga kolom di atasnya dan tetap terasa cukup, ia sudah berubah jadi verdict dan D-07 perlu diperketat. `synthesis` yang benar justru **tidak berguna** sendirian — ia menunjuk ke atas.
+ 
+ ## 5. Yang Perlu Ditambahkan ke Pipeline
+ 
+@@ -169,15 +177,15 @@ Dashboard ini butuh tiga hal yang **belum ada** di kontrak data. Semuanya dihasi
+ | `ComponentReading.narrative` | Layer 1, per komponen | Narasi arti pembacaan. Membawa `method_version` |
+ | `MarketContextPackage.context_summary` | Layer 1, per sesi | Kesimpulan Section 2 halaman Layer 1. `kind=derived`, punya `method_version` + confidence. Lihat D-06 |
+ | `ModuleOutput.stance_rationale` | Layer 2, per modul | Sudah ada di kontrak D-04 — pastikan terisi, bukan opsional |
++| `AggregatorOutput.synthesis` | Layer 2, per saham | Peta konvergensi/divergensi (D-07). `kind` sintesis — punya `method_version` & confidence |
+ 
+-Perubahan ini menaikkan `04_DATA_CONTRACTS.md` ke versi 1.1.0.
++Perubahan ini menaikkan `04_DATA_CONTRACTS.md` ke versi 1.2.0.
+ 
+ ---
+ 
+ ## 6. Yang Masih Perlu Diputuskan
+ 
+ - **D-06** — spec `context_summary`: kriteria, ambang, apa yang membuatnya "degraded".
+-- **D-07** — arti "menampilkan kesimpulan" di section 2 Layer 2.
+ - **Siapa yang menulis narasi.** Kalau LLM, ia butuh `method_version` yang mencakup versi model + prompt — kalau tidak, narasi lama tidak bisa direproduksi dan Prinsip #6 bocor lewat pintu ini.
+ - **Riwayat sesi.** Dashboard menampilkan sesi terakhir saja, atau bisa telusuri sesi lama dari Historical Tracking? Yang kedua jauh lebih berguna untuk mengevaluasi reasoning, tapi butuh format penyimpanan yang sudah stabil.
+ - **Teknologi.** Static HTML dari template, atau app lokal. Belum diputuskan — tapi apa pun pilihannya, prinsip 2.1 mengikat.
+diff --git a/03_LAYER2_SPECS/11_AGGREGATOR_OUTPUT.md b/03_LAYER2_SPECS/11_AGGREGATOR_OUTPUT.md
+index fc70130..aaf9102 100644
+--- a/03_LAYER2_SPECS/11_AGGREGATOR_OUTPUT.md
++++ b/03_LAYER2_SPECS/11_AGGREGATOR_OUTPUT.md
+@@ -1,7 +1,7 @@
+ # Aggregator & Output
+ 
+ **Status:** Aktif — revisi: kontrak output, urutan tampilan ditetapkan, larangan field verdict (D-04)
+-**Doc version:** 2.0.0
++**Doc version:** 2.1.0
+ 
+ ## Definisi
+ 
+@@ -29,12 +29,34 @@ Ini keputusan sadar, bukan default yang kebetulan. Alternatifnya — mengurutkan
+ 
+ Urutan tetap tetap punya bias anchoring — yang pertama dibaca duluan, dan Multibagger akan selalu dapat perhatian pertama. Bedanya: bias itu **konstan**, sama untuk semua saham, jadi tidak bisa disalahartikan sebagai sinyal tentang saham ini. Bias yang konstan bisa dikenali dan dikompensasi pembaca. Bias yang berubah-ubah per saham tidak bisa — ia terlihat seperti informasi.
+ 
++## Synthesis — Peta Konvergensi (D-07)
++
++Selain menyusun tiga `ModuleOutput`, Aggregator menghasilkan `synthesis`: peta di mana ketiga modul sepakat, di mana berbeda, dan **kenapa** berbeda.
++
++Ini terlihat seperti pelanggaran "Aggregator tidak menyimpulkan" — tapi bukan, dan bedanya pokok:
++
++- **Verdict memampatkan** tiga dimensi jadi satu, lalu membuang sisanya. Informasi hilang.
++- **`synthesis` memetakan** — ia menunjuk balik ke tiga hasil, tidak menggantikannya. Ia daftar isi, bukan pengganti isi.
++
++Alasan ia ada: tiga kolom berdampingan tanpa apa-apa lagi bukan transparan — ia memindahkan beban sintesis ke pembaca setiap kali, tanpa alat. Informasi tentang *kenapa* dua modul berbeda memang sudah ada, tapi tersebar di `stance_rationale`, `context_used`, dan `knowledge_gaps` milik tiga modul. Yang harus dirakit ulang manual tiap kali secara praktis sama dengan tidak transparan.
++
++Aturan mengikat (S1–S6 di D-07), yang terpenting:
++
++- **Wajib sitasi** — klaim yang tidak bisa menunjuk ke modul + field spesifik tidak boleh ditulis.
++- **Confidence = terendah dari tiga modul**, bukan rata-rata. Rangkuman tidak boleh lebih yakin dari input terlemahnya.
++- **Ketiga stance sama → `full_convergence=true`** dan picu tes T2. Konvergensi penuh adalah sinyal Multi-Lens mungkin cuma klaim di atas kertas — justru saat paling nyaman itulah paling perlu dicurigai.
++- **Ditampilkan di bawah tiga kolom**, tidak di atas (urusan dashboard, tapi mengikat).
++
++Bentuknya di `01_ARCHITECTURE/04_DATA_CONTRACTS.md` §7.
++
+ ## Yang Tidak Boleh Ada di Output
+ 
+ `AggregatorOutput` **dilarang** punya field `verdict`, `score`, `rank`, `recommendation`, atau turunan apa pun yang meringkas tiga pandangan jadi satu.
+ 
+ Ini bukan "belum sempat" — ini tugas yang sengaja tidak diberikan (`01_ARCHITECTURE/01_SYSTEM_OVERVIEW.md` §3: *"Aggregator tidak menyimpulkan"*). Ditulis sebagai larangan eksplisit karena inilah tekanan yang paling mudah menyerah di fase implementasi: satu angka ringkasan selalu terasa lebih enak dipakai daripada tiga pandangan yang harus dibaca. Persis itu yang bikin v1 gagal.
+ 
++`synthesis` **bukan pengecualian** dari larangan ini — ia memetakan, tidak memampatkan. Uji pembedanya: kalau `synthesis` bisa dibaca tanpa `module_outputs` dan tetap terasa cukup, ia sudah jadi verdict dan sudah gagal.
++
+ Kalau suatu saat ini dilanggar, lakukan lewat entri baru di `00_Foundation/04_DECISIONS.md` yang membatalkan D-04 secara eksplisit — bukan diam-diam saat implementasi.
+ 
+ ## Kalau Proses Dihentikan
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index a58ca9d..25a7e99 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -13,7 +13,7 @@ Rombakan lapisan tampilan. Pemicunya: transparansi — hasil keluar, tapi angka
+   - **Layer 1** — §1: 12 kartu komponen (nilai + badge `kind` + narasi + sumber + waktu tarik + `method_version`), urut mengikuti DAG. §2: kesimpulan konteks market.
+   - **Layer 2** — §1: snapshot 7 bagian Knowledge + kelengkapan field + tanggal snapshot + sumber. §2: tiga modul berdampingan (stance, confidence + limiters, `flag_responses`, `context_used`, `knowledge_gaps`).
+ - **D-06** — dashboard ditambahkan; `context_summary` & narasi per komponen **dihasilkan Layer 1, bukan dashboard**.
+-- **D-07** — ⚠ **terbuka**: arti "menampilkan kesimpulan" di §2 Layer 2.
++- **D-07** — **diputuskan**: §2 Layer 2 menampilkan `synthesis` — peta konvergensi & divergensi, bukan verdict dan bukan tiga kolom telanjang.
+ 
+ ### Aturan mengikat dashboard
+ - **Menampilkan, tidak menghitung.** Baca artefak, jangan hitung ulang, jangan panggil provider. Dashboard yang menghitung sendiri = sumber kebenaran kedua; yang diaudit nanti adalah yang tersimpan, bukan yang tampil.
+@@ -22,10 +22,17 @@ Rombakan lapisan tampilan. Pemicunya: transparansi — hasil keluar, tapi angka
+ - **Badge `kind` menonjol.** Business Cycle Stage (derived) tidak boleh tampil sebobot VIX (direct).
+ - **Section 1 Layer 2 tanpa kata sifat evaluatif.** "Margin 42%" boleh, "margin sehat" tidak.
+ 
+-### Kontrak data → 1.1.0
++### D-07 — kenapa (a) dan (b) dua-duanya ditolak
++- **(b) verdict gabungan** melanggar Prinsip #3 & D-04 — dan di dashboard justru lebih buruk: tetap single-verdict, tapi tanpa confidence dan tidak tersimpan ke Historical Tracking, jadi tidak pernah bisa dievaluasi benar-salahnya.
++- **(a) tiga kolom telanjang** juga ditolak. Ini yang tidak terlihat di ronde sebelumnya: tiga kolom tanpa apa-apa lagi bukan transparan — ia memindahkan beban sintesis ke pembaca setiap kali, tanpa alat. Informasi *kenapa* dua modul berbeda memang ada, tapi tersebar di `stance_rationale` + `context_used` + `knowledge_gaps` milik tiga modul. Yang harus dirakit manual tiap kali = praktis tidak transparan. Itulah kenapa permintaan "kesimpulan" muncul.
++- **(c) `synthesis`** — memetakan, tidak memampatkan. Aturan: wajib sitasi (S2), confidence = terendah dari 3 modul bukan rata-rata (S4), posisi di bawah tiga kolom (S1), kosakata verdict dilarang (S3), konvergensi penuh picu tes T2 (S5).
++- **Uji pembeda:** kalau `synthesis` bisa dibaca tanpa tiga kolom dan terasa cukup, ia sudah jadi verdict dan gagal.
++
++### Kontrak data → 1.2.0
+ - `ComponentReading.narrative` + `narrative_version`
+ - `MarketContextPackage.context_summary` → `ContextSummary {kind, method_version, narrative, confidence, components_degraded}`
+-- `ContextSummary` **dilarang** punya skor tunggal — sejajar dengan larangan `verdict` di Aggregator
++- `AggregatorOutput.synthesis` → `Synthesis {agreements[], divergences[] (+root_cause), narrative, confidence, full_convergence}`
++- `ContextSummary` & `Synthesis` **dilarang** punya skor tunggal — termasuk skor kesepakatan ("3/3 modul positif"), yang terdengar seperti peta tapi sebenarnya skor
+ 
+ ### Catatan Prinsip #8
+ Dashboard menambah komponen, dan Prinsip #8 melarang melebar sebelum yang ada matang. Kasus ini diterima karena dashboard tidak menambah kemampuan analisa — ia membuat analisa yang sudah ada bisa diperiksa. Yang ada tidak bisa dimatangkan kalau hasilnya tidak bisa dilihat.
+-- 
+2.43.0
+
