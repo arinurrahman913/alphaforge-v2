@@ -1,7 +1,7 @@
 # Module — Quality / Compound
 
 **Status:** Aktif — revisi: kontrak output & aturan validasi flag ditambahkan (D-04)
-**Doc version:** 2.1.0
+**Doc version:** 3.0.0
 
 ## Definisi
 
@@ -43,6 +43,26 @@ Aturan validasi yang berlaku ke modul ini (output **ditolak** kalau gagal):
 **Pertanyaan modul ini:** *Ini mesin compounding?*
 
 **Kosakata:** `compounding_kuat` · `compounding_rapuh` · `bukan_compounder` · `mesin_tak_terbaca`
+
+### Akses Field (D-12)
+
+**Boleh baca:** 1, 2 (penuh), 3a, 4 (penuh), 5, 6, 7, peer
+**Tidak boleh baca:** 3b (momentum), `CatalystSet`
+
+### Kriteria & Tesis (D-13)
+
+**Quality bertaruh pada kelanjutan, bukan perubahan (D-13).** Mesin ini jalan, dan pertanyaannya cuma apakah ia akan terus jalan — bukan apakah ada sesuatu yang baru akan terjadi.
+
+**Kenapa tidak boleh membaca 3b (momentum) atau `CatalystSet`:** mesin yang awet tidak perlu sedang berakselerasi untuk dianggap awet. Kalau Quality boleh melihat momentum, ia perlahan tergoda mengandalkannya dan menempel ke Multibagger — dua lensa jadi satu lensa berbaju dua (D-12).
+
+| Stance | Syarat |
+|---|---|
+| `compounding_kuat` | Margin (gross/operating) stabil atau naik N periode terakhir · FCF positif berturut · konsentrasi revenue di bawah ambang · percentile margin peer di atas median · tanpa flag governance severity tinggi yang belum direspons |
+| `compounding_rapuh` | Margin/FCF mulai turun, tapi 3a (model bisnis, posisi kompetitif) masih utuh — mesin melambat, belum berubah bentuk |
+| `bukan_compounder` | Kerugian struktural di bisnis inti, atau restatement, atau margin & FCF negatif bersamaan — mesin sudah jadi mesin lain |
+| `mesin_tak_terbaca` | Field kunci di 2/3a/7 `missing` melewati ambang |
+
+**Draft komitmen pertama, diuji ke 3 kasus (D-13):** PG → `compounding_kuat` (FCF productivity 82%, dividen naik 70 tahun berturut). INTC → `bukan_compounder` (GAAP EPS −0.73, foundry operating loss $2.4B/kuartal, restructuring $4.1B). **MSFT → `compounding_rapuh`** — GM 67.6% tersempit sejak 2022, capex kalender 2026 naik 61% dengan $25B dari itu murni inflasi harga komponen (bukan kapasitas tambahan). Diambil **tanpa pernah melihat Azure +40%** (itu 3b) — pembuktian langsung bahwa D-12 menghasilkan stance yang berbeda dari kalau semua field dibuka.
 
 Kosakata ini **tidak dipakai modul lain dan tidak bisa dipetakan ke kosakata modul lain** — pemetaan semacam itu dilarang dibuat (D-09). Versi sebelumnya memakai satu enum bersama (`compelling/interesting/weak`) untuk ketiga modul; itu skala ordinal yang langsung berubah jadi hitungan suara di kepala pembaca.
 

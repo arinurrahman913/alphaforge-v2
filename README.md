@@ -21,7 +21,7 @@ v1 (`alphaforge-v1` / `alphaforge-core-v1`) tetap hidup sebagai referensi — ti
 
 ## Status
 
-**Spec:** 38 dokumen. Fondasi, arsitektur, dan Layer 1 lengkap. Di Layer 2, wadahnya sudah dikunci (kontrak data, aturan validasi) — **isi kriteria & bobot tiga modul reasoning belum**, dan itu keputusan terbuka terbesar yang tersisa.
+**Spec:** 41 dokumen. Fondasi, arsitektur, Layer 1, dan wadah Layer 2 lengkap. **Kriteria tiga modul reasoning kini punya draft komitmen pertama (D-13)** — trajectory untuk Multibagger, kelanjutan untuk Quality, resolusi katalis untuk Speculative — diuji ke 3 kasus nyata (INTC, PG, MSFT dari data Q1/Q3 FY2026). Ambang numerik dan cakupan populasi penuh belum diuji; ini draft kerja dua penulis, bukan keputusan final satu pihak.
 
 **Kode:** ada di repo terpisah `alphaforge-core-v2`, mengikuti pola v1 (`alphaforge` untuk dokumentasi, `alphaforge-core` untuk kode). Implementasi awal Layer 1 (12/12) dan Layer 2 end-to-end sudah jalan dan tervalidasi dengan data live. Beberapa hal diketahui belum lengkap — lihat `PROGRESS_2026-07-14.md`.
 
@@ -34,7 +34,8 @@ v1 (`alphaforge-v1` / `alphaforge-core-v1`) tetap hidup sebagai referensi — ti
 3. `01_ARCHITECTURE/01_SYSTEM_OVERVIEW.md` — gambaran alur end-to-end
 4. `01_ARCHITECTURE/04_DATA_CONTRACTS.md` — bentuk tiap paket data yang mengalir
 5. `01_ARCHITECTURE/05_DASHBOARD_LOCAL.md` — bagaimana semuanya ditampilkan
-6. Lanjut ke spec detail sesuai layer yang ingin didalami
+6. `03_LAYER2_SPECS/07,08,09` — kriteria & akses field tiga modul reasoning (D-12, D-13)
+7. Lanjut ke spec detail sesuai layer yang ingin didalami
 
 ## Konvensi Dokumen
 

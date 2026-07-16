@@ -1,7 +1,7 @@
 # Kontrak Data (Data Contracts)
 
 **Status:** Aktif
-**Doc version:** 2.0.0
+**Doc version:** 3.0.0
 
 ---
 
@@ -89,7 +89,7 @@ KnowledgeProfile {
   sections              : {
     identity            : {...}   # bagian 1
     financial_health    : {...}   # bagian 2
-    competitive_position: {...}   # bagian 3
+    competitive_position: {structure: {...}, momentum: {...}}  # 3a & 3b (D-13)
     historical_trends   : {...}   # bagian 4
     ownership           : {...}   # bagian 5
     valuation           : {...}   # bagian 6 — lihat D-02
@@ -266,7 +266,7 @@ Prinsip #3 sudah mendefinisikan "independen" secara teknis, tapi belum pernah me
 - **Narasi tidak diuji terpisah** — ia render deterministik dari field terstruktur (D-10), jadi kalau field-nya identik, narasinya identik dengan sendirinya.
 
 > Kalau modul reasoning sendiri berbasis LLM, T1a tidak akan lulus. Itu keputusan yang harus diambil sadar, bukan ditemukan saat tes merah — lihat D-10 dan Keputusan Terbuka.
-- **T2 — Konvergensi mencurigakan.** Di satu batch analisa, kalau ketiga modul menghasilkan `stance` yang sama untuk >90% ticker, Multi-Lens-nya patut dicurigai jadi klaim di atas kertas. Ini bukan kegagalan otomatis — bisa saja market-nya memang seragam — tapi wajib memicu review, bukan lewat diam-diam.
+- **T2 — Redundansi lensa (redefinisi D-14).** *Definisi lama* ("stance sama untuk >90% ticker") berhenti bisa dihitung sejak D-09 memisahkan kosakata `stance` per modul — "sama" tidak lagi punya arti antar sumbu berbeda. *Definisi baru:* hitung **mutual information** antar stance tiga lensa di seluruh populasi sesi. Kalau mendekati nol entropi bersyarat — stance lensa B bisa ditebak dari stance lensa A — lensa B redundan, Multi-Lens tinggal klaim di atas kertas. Bisa dihitung otomatis tiap sesi dari satu angka, tidak perlu menunggu Historical Tracking v2.1.
 
 ---
 
@@ -309,8 +309,21 @@ Synthesis {
   narrative             : string                    # rangkuman naratif, tunduk S2 & S3
   confidence            : {score, band, limiters}   # = TERENDAH dari 3 modul (S4)
   full_convergence      : bool                      # true kalau 3 stance sama → picu T2 (S5)
+  surprise              : number                    # D-14 — -log P(kombinasi stance | populasi sesi)
+  population_baseline   : {session_id, sample_size}  # D-14 — rujukan populasi yang dipakai hitung surprise
 }
 ```
+
+### `surprise` — Metrik Daftar Divergensi (D-14)
+
+Menggantikan "jumlah divergensi" (D-08 L5 versi awal) sebagai dasar urutan daftar Divergensi. Alasannya: jumlah label berbeda **bukan** ukuran informasi. Dua saham bisa punya jumlah divergensi identik — satu bisa ditebak penuh dari satu lensa (tidak informatif), satu tidak bisa ditebak sama sekali (sangat informatif). Cuma `surprise` yang membedakan keduanya.
+
+```
+P(stance_quality, stance_speculative | stance_multibagger)  ← dihitung dari seluruh populasi sesi
+surprise(ticker) = −log P(kombinasi stance ticker ini | populasi sesi ini)
+```
+
+**Konsekuensi barrier:** `surprise` butuh populasi utuh — tidak bisa dihitung sampai `ModuleOutput` seluruh kandidat sesi selesai. Ini memperberat barrier Fase B satu langkah: `synthesis` per ticker menunggu populasi, berbeda dari `ModuleOutput` yang selesai per-ticker begitu Fase B tickernya sendiri kelar.
 
 `root_cause` adalah inti gunanya. "Multibagger dan Quality/Compound berbeda" itu belum informasi — yang informasi adalah **kenapa**: apakah mereka membaca field yang berbeda, membobot field yang sama secara berbeda, salah satu terhalang `knowledge_gap`, atau berbeda dalam merespons flag yang sama.
 

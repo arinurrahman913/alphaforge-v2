@@ -1,7 +1,7 @@
 # Module — Speculative
 
 **Status:** Aktif — revisi: kontrak output & aturan validasi flag ditambahkan (D-04)
-**Doc version:** 2.1.0
+**Doc version:** 3.0.0
 
 ## Definisi
 
@@ -43,6 +43,26 @@ Aturan validasi yang berlaku ke modul ini (output **ditolak** kalau gagal):
 **Pertanyaan modul ini:** *Ada asimetri berkatalis?*
 
 **Kosakata:** `asimetri_berkatalis` · `asimetri_tanpa_katalis` · `tanpa_asimetri` · `asimetri_tak_terbaca`
+
+### Akses Field (D-12)
+
+**Boleh baca:** 1, volatilitas (4), 5, `CatalystSet` (penuh), konteks makro
+**Tidak boleh baca:** 2 (kesehatan finansial), 3 (posisi kompetitif), 6 (valuasi)
+
+### Kriteria & Tesis (D-13)
+
+**Speculative bertaruh pada resolusi peristiwa, bukan pada kelanjutan atau trajectory (D-13).** Butuh tanggal — itu yang membedakannya dari Multibagger, yang trajectory-nya jalan terus dengan atau tanpa satu peristiwa tertentu.
+
+**Kenapa tidak boleh membaca valuasi (6):** ini batas lensa, bukan gaya bicara. Asimetri berkatalis tidak butuh harga masuk yang wajar untuk jadi asimetri — kalau boleh melihat valuasi, Speculative akan pelan-pelan berubah jadi Quality yang gugup.
+
+| Stance | Syarat |
+|---|---|
+| `asimetri_berkatalis` | ≥1 katalis `scheduled`/`expected` dalam horizon · hasil genuinely tidak pasti (ada gap guidance-vs-konsensus, atau outcome biner regulasi/trial) · volatilitas cukup untuk asimetri berarti |
+| `asimetri_tanpa_katalis` | Tidak ada katalis dalam horizon, tapi volatilitas tetap tinggi |
+| `tanpa_asimetri` | Tidak ada katalis, volatilitas rendah |
+| `asimetri_tak_terbaca` | `CatalystSet.status` degraded/missing |
+
+**Draft komitmen pertama, diuji ke 3 kasus (D-13):** PG → `tanpa_asimetri`. INTC → `asimetri_berkatalis` (ramp 18A, guidance $1.3B di atas konsensus). MSFT → `asimetri_berkatalis` (restrukturisasi kemitraan OpenAI 27 April, capex $3.4B di bawah konsensus meski beat semua metrik lain — celah ekspektasi yang jelas).
 
 Kosakata ini **tidak dipakai modul lain dan tidak bisa dipetakan ke kosakata modul lain** — pemetaan semacam itu dilarang dibuat (D-09). Versi sebelumnya memakai satu enum bersama (`compelling/interesting/weak`) untuk ketiga modul; itu skala ordinal yang langsung berubah jadi hitungan suara di kepala pembaca.
 

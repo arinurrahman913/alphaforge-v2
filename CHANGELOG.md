@@ -4,6 +4,33 @@ Format: perubahan dicatat per revisi, mengacu ke entri `D-xx` di `00_Foundation/
 
 ---
 
+## 2026-07-16 (lanjutan) — Kriteria Modul & Akses Field (D-12, D-13, D-14)
+
+Titik paling menentukan sejak proyek dimulai: kriteria tiga modul reasoning, yang sejak review pertama sengaja dibiarkan kosong menunggu bukti, sekarang punya draft komitmen pertama.
+
+### D-12 — Pembatasan akses field per modul
+Tiap modul reasoning cuma boleh membaca subset `KnowledgeProfile`, bukan keseluruhannya. **Ini bukan optimasi — ini yang menciptakan tiga lensa.** Tanpa pembatasan, ketiga modul membaca fakta identik dan cuma bisa berbeda soal bobot (D-09 jadi kosakata kosong tanpa isi berbeda di baliknya).
+
+### D-13 — Kriteria & tesis tiga modul
+- **Multibagger = trajectory** — bukan Gap (pasar belum tahu, nyaris mustahil dijadikan kriteria data) dan bukan Momentum murni (itu Speculative). Kurva yang sudah kelihatan, diteruskan 3–5 tahun, menghasilkan kelipatan; harga sekarang cuma mem-price tahun depan.
+- **Quality = kelanjutan** — mesin ini jalan, akan terus jalan atau tidak. Sengaja **tidak boleh membaca momentum (3b)** atau `CatalystSet`, supaya tidak tergoda menempel ke tesis Multibagger.
+- **Speculative = resolusi katalis** — butuh tanggal. Sengaja **tidak boleh membaca valuasi (6)** — asimetri tidak butuh harga masuk wajar untuk jadi asimetri.
+- **Bagian 3 Knowledge dipecah 3a (struktur) / 3b (momentum).** Trajectory butuh keduanya; kelanjutan cuma butuh yang pertama.
+- **Diuji ke 3 kasus nyata** (data Q1/Q3 FY2026): INTC → `bukan_compounder` + `asimetri_berkatalis` + `ruang_tak_terbaca` (revisi dari klaim awal `ruang_terbuka`). PG → `compounding_kuat` + `tanpa_asimetri` + `ruang_tertutup`. **MSFT → `compounding_rapuh`** (GM tersempit sejak 2022, capex naik 61% dengan sebagian cuma inflasi komponen) **dicapai tanpa pernah melihat Azure +40%** (3b) — bukti langsung D-12 menghasilkan kesimpulan berbeda dari kalau semua field dibuka.
+- Draft ini **punya dua penulis** dan wajib direvisi kalau pemilik produk merasa ada bagian yang salah — bukan dipertahankan karena sudah tertulis rapi.
+
+### D-14 — `surprise` menggantikan jumlah divergensi; T2 didefinisikan ulang
+Pembuktian D-13 membongkar metrik daftar Divergensi (D-08 L5): PG dan MSFT sama-sama 3 label berbeda — skor identik menurut "jumlah divergensi" — tapi PG bisa ditebak penuh dari satu lensa (tidak informatif), MSFT tidak bisa (sangat informatif). **Jumlah label berbeda bukan ukuran informasi.**
+
+Penggantinya: `surprise(ticker) = −log P(kombinasi stance | populasi sesi ini)`, dihitung dari seluruh populasi sesi. Efek samping: **T2 (D-04) yang sudah tidak bisa dihitung sejak D-09** (kosakata stance terpisah membuat "stance sama" kehilangan arti) sekarang didefinisikan ulang lewat mutual information antar lensa — bisa dihitung otomatis tiap sesi, tidak perlu menunggu Historical Tracking v2.1.
+
+### Konsekuensi teknis
+- Kontrak data → 3.0.0: `Synthesis.surprise`, `Synthesis.population_baseline`.
+- `KnowledgeProfile` → 3.0.0: bagian 3 pecah 3a/3b, tabel akses field per modul.
+- Barrier Fase B (D-03) diperberat satu langkah: `surprise` butuh populasi utuh, tidak bisa dihitung per-ticker.
+
+---
+
 ## 2026-07-16 — Dashboard Lokal (D-06, D-07)
 
 Rombakan lapisan tampilan. Pemicunya: transparansi — hasil keluar, tapi angka & alasan di baliknya tidak kelihatan.

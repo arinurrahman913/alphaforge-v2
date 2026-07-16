@@ -1,7 +1,7 @@
 # Aggregator & Output
 
 **Status:** Aktif — revisi: kontrak output, urutan tampilan ditetapkan, larangan field verdict (D-04)
-**Doc version:** 2.1.0
+**Doc version:** 3.0.0
 
 ## Definisi
 
@@ -44,7 +44,8 @@ Aturan mengikat (S1–S6 di D-07), yang terpenting:
 
 - **Wajib sitasi** — klaim yang tidak bisa menunjuk ke modul + field spesifik tidak boleh ditulis.
 - **Confidence = terendah dari tiga modul**, bukan rata-rata. Rangkuman tidak boleh lebih yakin dari input terlemahnya.
-- **Ketiga stance sama → `full_convergence=true`** dan picu tes T2. Konvergensi penuh adalah sinyal Multi-Lens mungkin cuma klaim di atas kertas — justru saat paling nyaman itulah paling perlu dicurigai.
+- **Ketiga stance sama → `full_convergence=true`** dan picu tes T2 (definisi ulang D-14: mutual information antar lensa, bukan "stance sama >90%" yang sudah tidak bisa dihitung sejak D-09).
+- **`surprise` (D-14)** menggantikan jumlah label berbeda sebagai dasar urutan daftar Divergensi (D-08). Dihitung dari populasi sesi, butuh Fase B seluruh kandidat selesai lebih dulu.
 - **Ditampilkan di bawah tiga kolom**, tidak di atas (urusan dashboard, tapi mengikat).
 
 Bentuknya di `01_ARCHITECTURE/04_DATA_CONTRACTS.md` §7.

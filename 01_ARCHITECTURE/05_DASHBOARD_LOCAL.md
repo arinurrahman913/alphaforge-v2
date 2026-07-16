@@ -1,7 +1,7 @@
 # Dashboard Lokal
 
 **Status:** Aktif
-**Doc version:** 2.0.0
+**Doc version:** 3.0.0
 
 ---
 
@@ -127,7 +127,7 @@ Bandingkan dengan satu daftar berperingkat: kamu datang tanpa pertanyaan, sistem
 | L4 | Halaman saham **selalu** menampilkan ketiganya, lewat daftar mana pun masuknya |
 | L5 | Daftar Divergensi mengurut menurut jumlah & kedalaman divergensi, **tidak pernah** menurut stance |
 
-**Daftar Divergensi** diurutkan dari `synthesis.divergences[]`. Ini bukan peringkat kualitas — ini peringkat **seberapa banyak yang bisa dipelajari**. Saham yang ketiganya sepakat tidak mengajarkan apa pun yang tidak bisa didapat dari satu lensa; saham yang ketiganya berselisih adalah satu-satunya tempat multi-lens membayar dirinya sendiri.
+**Daftar Divergensi** diurutkan dari `synthesis.surprise` (D-14) — bukan jumlah label berbeda. Terbukti perlu: PG dan MSFT sama-sama punya 3 label berbeda, tapi PG bisa ditebak penuh dari satu lensa (tidak informatif) sementara MSFT tidak bisa (sangat informatif). Daftar ini **cuma bisa dirender setelah populasi sesi lengkap** — beda dari tiga daftar per-lensa yang bisa dirender begitu ticker itu sendiri selesai Fase B.
 
 Tiap baris daftar menampilkan: ticker, stance lensa itu, confidence, jumlah flag. **Tidak lebih.** Baris daftar bukan tempat meringkas — ia tempat memutuskan mau klik atau tidak.
 
@@ -193,7 +193,8 @@ Posisinya mengikat, bukan preferensi tata letak. Di atas, ia jadi verdict yang d
 | `divergences[]` | Klaim yang berbeda, + posisi tiap modul, + **`root_cause`**, + sitasi |
 | `narrative` | Rangkuman naratif |
 | `confidence` | **Sama dengan confidence terendah dari tiga modul** — tampilkan modul mana sumbernya |
-| `full_convergence` | Kalau `true`, tampilkan penanda: ketiga lensa sepakat penuh → patut dicurigai (tes T2) |
+| `full_convergence` | Kalau `true`, tampilkan penanda: ketiga lensa sepakat penuh → patut dicurigai (tes T2, redefinisi D-14) |
+| `surprise` | Angka mentah + persentil terhadap populasi sesi — ini yang menentukan urutan di daftar Divergensi |
 
 **`root_cause` adalah inti gunanya.** "Multibagger dan Quality/Compound berbeda" belum informasi. Yang informasi: *kenapa* — beda field yang dibaca, beda bobot atas field yang sama, salah satu terhalang `knowledge_gap`, atau beda cara merespons flag yang sama.
 

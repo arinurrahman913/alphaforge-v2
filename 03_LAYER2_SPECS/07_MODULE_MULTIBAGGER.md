@@ -1,7 +1,7 @@
 # Module — Multibagger
 
 **Status:** Aktif — revisi: kontrak output & aturan validasi flag ditambahkan (D-04)
-**Doc version:** 2.1.0
+**Doc version:** 3.0.0
 
 ## Definisi
 
@@ -43,6 +43,28 @@ Aturan validasi yang berlaku ke modul ini (output **ditolak** kalau gagal):
 **Pertanyaan modul ini:** *Ada ruang untuk kelipatan besar?*
 
 **Kosakata:** `ruang_terbuka` · `ruang_sempit` · `ruang_tertutup` · `ruang_tak_terbaca`
+
+### Akses Field (D-12)
+
+**Boleh baca:** 1, 2 (arah saja), 3a, 3b, 4, 6, peer, `CatalystSet` (sekunder)
+**Tidak boleh baca:** 5 (kepemilikan), 7 (governance)
+
+### Kriteria & Tesis (D-13)
+
+**Multibagger = trajectory, bukan gap dan bukan momentum murni (D-13).**
+
+Bukan taruhan bahwa pasar belum tahu (Gap — nyaris mustahil dijadikan kriteria berbasis data tanpa jadi "saya lebih pintar dari pasar"). Bukan taruhan pada satu peristiwa (Momentum murni — itu pertanyaan Speculative). Melainkan: **kurva pertumbuhan yang sudah kelihatan sekarang, diteruskan 3–5 tahun, menghasilkan kelipatan dari basis sekarang — dan harga sekarang cuma mem-price tahun depan, bukan lima tahun ke depan.**
+
+Pembeda bersih dari Speculative: **Speculative butuh tanggal resolusi. Multibagger tidak** — trajectory jalan terus dengan atau tanpa satu peristiwa tertentu. Karena itu Multibagger boleh membaca `CatalystSet` cuma sebagai konteks sekunder (katalis bisa mempercepat kurva), bukan sebagai bahan utama stance.
+
+| Stance | Syarat |
+|---|---|
+| `ruang_terbuka` | Pertumbuhan segmen (3b) berakselerasi/infleksi positif · valuasi sekarang cuma masuk akal dengan asumsi pertumbuhan segera melambat · TAM (3a) masih ada headroom (peer group menunjukkan penetrasi/pangsa masih rendah) |
+| `ruang_sempit` | Pertumbuhan kuat, tapi valuasi (peer percentile) sudah tinggi — kelanjutannya sudah mulai di-price |
+| `ruang_tertutup` | Pertumbuhan datar/melambat dan TAM matang (peer group semua mapan, market-nya sendiri tidak tumbuh) |
+| `ruang_tak_terbaca` | 3b `missing`, atau peer group `low_sample_size` |
+
+**Draft komitmen pertama, diuji ke 3 kasus (D-13):** PG → `ruang_tertutup`. MSFT → `ruang_sempit` (Azure +40%, tapi sudah di-price). INTC → `ruang_tak_terbaca` — revisi dari klaim awal `ruang_terbuka`; external foundry $174M dari basis nyaris nol ternyata bukan kurva yang sudah kelihatan, baru opsi yang belum mulai. Ambang numerik belum diuji ke populasi luas.
 
 Kosakata ini **tidak dipakai modul lain dan tidak bisa dipetakan ke kosakata modul lain** — pemetaan semacam itu dilarang dibuat (D-09). Versi sebelumnya memakai satu enum bersama (`compelling/interesting/weak`) untuk ketiga modul; itu skala ordinal yang langsung berubah jadi hitungan suara di kepala pembaca.
 

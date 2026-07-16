@@ -1,7 +1,7 @@
 # Knowledge
 
-**Status:** Aktif — revisi: bagian 6 (Valuasi) & 7 (Governance & Peristiwa Filing) ditambahkan, field relatif-peer dikeluarkan (lihat D-01, D-02, D-03 di `00_Foundation/04_DECISIONS.md`)
-**Doc version:** 2.0.0
+**Status:** Aktif — revisi: bagian 6 (Valuasi) & 7 (Governance & Peristiwa Filing) ditambahkan, field relatif-peer dikeluarkan (D-01,D-02,D-03); bagian 3 dipecah 3a/3b (D-13)
+**Doc version:** 3.0.0
 
 ## Definisi
 
@@ -38,9 +38,13 @@ Profil per ticker, lima bagian tetap (field kosong ditandai `null` + status `mis
 
 **2. Kesehatan Finansial** — tren revenue (YoY 4 kuartal terakhir, CAGR 3 & 5 tahun kalau data cukup), tren margin (gross/operating/net, per kuartal), struktur balance sheet (debt-to-equity, current ratio, posisi kas), tren cash flow (FCF per kuartal, FCF margin).
 
-**3. Posisi Kompetitif (deskriptif)** — kategori model bisnis kalau bisa ditentukan dari data (mis. subscription/hardware/marketplace), konsentrasi revenue per segmen bisnis (dari 10-K kalau tersedia), skala absolut (revenue TTM, jumlah karyawan kalau ada).
+**3a. Posisi Kompetitif — Struktur (D-13)** — kategori model bisnis kalau bisa ditentukan dari data (mis. subscription/hardware/marketplace), konsentrasi revenue per segmen bisnis (dari 10-K kalau tersedia), skala absolut (revenue TTM, jumlah karyawan kalau ada), estimasi ukuran TAM kalau tersedia dari filing/riset pihak ketiga yang dikutip perusahaan.
 
-> **Catatan (D-03):** field "pangsa revenue relatif terhadap total peer group" **dikeluarkan** dari sini. Field itu membuat Knowledge butuh pengetahuan tentang ticker lain, padahal Peer/Relative Comparison justru beroperasi *di atas* Knowledge — melingkar. Semua angka relatif-peer sekarang hidup di output Peer (`06_PEER_RELATIVE_COMPARISON.md`), bukan di sini. Bagian 3 tinggal berisi hal-hal yang bisa dihitung dari Evidence ticker itu sendiri.
+**3b. Posisi Kompetitif — Momentum (D-13)** — pertumbuhan tiap segmen bisnis (persen YoY/QoQ), tren guidance vs konsensus analis (naik/turun/sesuai, dari rilis berturut), sinyal akselerasi atau deselerasi (percepatan pertumbuhan dibanding kuartal sebelumnya).
+
+> **Kenapa bagian 3 dipecah (D-13):** 3a menjawab "seberapa besar ruangnya", 3b menjawab "apakah sedang bergerak ke arah situ". Quality/Compound cuma boleh membaca 3a — mesin yang awet tidak perlu sedang berakselerasi untuk dianggap awet, dan kalau Quality boleh membaca momentum, ia perlahan tergoda mengandalkannya dan menempel ke Multibagger (lihat D-12). Multibagger membaca keduanya, karena trajectory butuh tahu ruangnya (3a) dan geraknya (3b) sekaligus.
+>
+> **Catatan (D-03):** field "pangsa revenue relatif terhadap total peer group" **dikeluarkan** dari 3a. Field itu membuat Knowledge butuh pengetahuan tentang ticker lain, padahal Peer/Relative Comparison justru beroperasi *di atas* Knowledge — melingkar. Semua angka relatif-peer hidup di output Peer (`06_PEER_RELATIVE_COMPARISON.md`).
 
 **4. Tren Historis** — performa harga (return 1/3/5 tahun), volatilitas historis (std dev harian, beta terhadap index), rekam jejak earnings (jumlah beat/miss dari N kuartal terakhir — angka faktual).
 
@@ -61,6 +65,23 @@ Rasio yang secara matematis tidak bermakna diisi `null` + status `missing`, buka
 Semua tetap tunduk aturan yang sama: fakta dan tanggal, **tanpa kata sifat evaluatif**. "Auditor berganti 2 kali dalam 3 tahun" itu Knowledge; "governance lemah" itu bukan — itu wewenang Risk/Red-Flag Check dan modul reasoning.
 
 > **Kenapa bagian ini ada (D-01):** sebelum revisi ini, Risk/Red-Flag Check menyebut sumbernya "Knowledge & Evidence" — padahal dokumen ini menutup dengan aturan bahwa Risk beroperasi di atas Knowledge, bukan Evidence mentah. Dua-duanya tidak bisa benar. Akarnya: Risk butuh field yang memang tidak ada di skema ini, jadi ia terpaksa menjangkau Evidence. Bagian 7 menutup lubang itu supaya invariant satu arah tetap utuh — dan sebagai bonus, Confidence jadi bisa mengukur kelengkapan data governance, yang mustahil selama field-nya cuma hidup di Evidence.
+
+## Akses Field Per Modul (D-12)
+
+`KnowledgeProfile` yang sama disusun sekali, tapi tiap modul reasoning cuma boleh membaca subset-nya. Ini bukan detail implementasi — ini yang membuat tiga modul benar-benar jadi tiga lensa, bukan satu lensa dengan tiga suara (lihat D-12 di `00_Foundation/04_DECISIONS.md` untuk pembelaan tiap baris).
+
+| Bagian | Multibagger | Quality/Compound | Speculative |
+|---|:---:|:---:|:---:|
+| 1 — Identitas | ✅ | ✅ | ✅ |
+| 2 — Kesehatan finansial | arah saja | ✅ penuh | ❌ |
+| 3a — Struktur | ✅ | ✅ | ❌ |
+| 3b — Momentum | ✅ | ❌ | ❌ |
+| 4 — Tren historis | ✅ | ✅ penuh | volatilitas saja |
+| 5 — Kepemilikan | ❌ | ✅ | ✅ |
+| 6 — Valuasi | ✅ | ✅ | ❌ |
+| 7 — Governance | ❌ | ✅ | ❌ |
+
+Pelanggaran batas ini — field di luar akses modul muncul di `context_used` atau mempengaruhi `stance` — adalah bug, bukan pilihan implementasi.
 
 **Metadata** (menempel di setiap profil, bukan bagian terpisah): `evidence_snapshot_date`, `method_version`, daftar field yang berhasil diisi vs field yang diharapkan (jadi input langsung buat Confidence/Data Quality), daftar sumber Evidence yang dipakai.
 

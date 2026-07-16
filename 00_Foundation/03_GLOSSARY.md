@@ -1,7 +1,7 @@
 # AlphaForge v2 — Glosarium
 
 **Status:** Aktif — revisi: istilah dari kontrak data & keputusan D-01..D-05 ditambahkan
-**Doc version:** 1.5.0
+**Doc version:** 2.0.0
 
 Istilah-istilah kunci yang dipakai konsisten di seluruh dokumen AlphaForge v2. Disusun per kelompok: konsep fondasi, istilah Layer 1, istilah Layer 2.
 
@@ -143,6 +143,18 @@ Katalis terjadwal per ticker, dihasilkan Fase A. **Bukan bagian Knowledge** — 
 
 **Confidence Report vs Confidence Modul**
 `ConfidenceReport` (1 per ticker) mengukur kekuatan **data**. `ModuleOutput.confidence` (3 per ticker) mengukur keyakinan **modul pada kesimpulannya sendiri**. Aturan V6: yang kedua tidak boleh melebihi yang pertama. Sebaliknya boleh — data lengkap tidak mewajibkan kesimpulan kuat.
+
+**Trajectory (D-13)**
+Tesis inti Multibagger: kurva pertumbuhan yang sudah kelihatan sekarang, diteruskan 3–5 tahun, menghasilkan kelipatan dari basis sekarang — dan harga sekarang cuma mem-price tahun depan, bukan lima tahun ke depan. Bukan Gap (pasar belum tahu) dan bukan Momentum murni (satu peristiwa) — pembedanya dari Speculative: Speculative butuh tanggal resolusi, trajectory tidak.
+
+**Akses Field Per Modul (D-12)**
+Tiap modul reasoning cuma boleh membaca subset `KnowledgeProfile`, bukan keseluruhannya. Ini yang menciptakan tiga lensa yang beneran berbeda — tanpa pembatasan ini, ketiga modul cuma bisa berbeda soal bobot terhadap fakta yang sama, bukan soal fakta itu sendiri.
+
+**Bagian 3a / 3b Knowledge (D-13)**
+Posisi kompetitif dipecah: 3a struktur (model bisnis, TAM, konsentrasi revenue — dibaca Multibagger & Quality), 3b momentum (pertumbuhan segmen, tren guidance — cuma dibaca Multibagger). Quality sengaja tidak boleh membaca 3b supaya tidak tergoda menempel ke tesis Multibagger.
+
+**Surprise (D-14)**
+Metrik urutan daftar Divergensi: −log P(kombinasi stance ticker ini | populasi sesi ini). Menggantikan "jumlah label berbeda", yang terbukti tidak membedakan saham membosankan (bisa ditebak penuh dari satu lensa) dari saham yang benar-benar informatif.
 
 **Synthesis (Peta Konvergensi)**
 Bagian yang memetakan di mana ketiga modul reasoning sepakat, di mana berbeda, dan **kenapa** berbeda (`root_cause`). Bukan verdict: verdict memampatkan tiga dimensi jadi satu lalu membuang sisanya; `synthesis` menunjuk balik ke tiga hasil dan tidak menggantikannya — daftar isi, bukan pengganti isi. Confidence-nya = terendah dari tiga modul, bukan rata-rata. Ditampilkan di bawah tiga kolom, tidak di atas. Uji pembedanya: kalau bisa dibaca sendirian dan terasa cukup, ia sudah jadi verdict. Lihat D-07.
